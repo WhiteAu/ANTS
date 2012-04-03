@@ -7,20 +7,21 @@ from ants import *
 class MyBot:
     def __init__(self):
         # define class level variables, will be remembered between turns
-        pass
+        self.unseen = []
+        self.hills = []
+        
     
     # do_setup is run once at the start of the game
     # after the bot has received the game settings
     # the ants class is created and setup by the Ants.run method
     def do_setup(self, ants):
         # initialize data structures after learning the game settings
-        self.unseen = []
         #Make-it-rain strategy.  Make better!
         for row in range(ants.rows):
             for col in range(ants.cols):
                 self.unseen.append((row,col))
 
-        pass
+        
     
     # do turn is run once per turn
     # the ants class has the game state and is updated by the Ants.run method
@@ -64,7 +65,19 @@ class MyBot:
             if food_loc not in targets and ant_loc not in targets.values():
                 do_move_location(ant_loc, food_loc)
 
-
+        #Attack Enemy Hills!  THis is HOW WE GET POINTS, so may be worth moving up in priority.
+        for hill_loc, hill_owner in ants.enemy_hills():
+            if hill_loc not in self.hills:
+                self.hills.append(hill_loc)
+        ant_dist = []
+        for hill_loc in self.hills:
+            for ant_loc in ants.my_ants():
+                if ant_loc not in orders.values():
+                    dist = ants.distance(ant_loc, hill_loc)
+                    ant_dist.append((dist, ant_loc, hill_loc))
+        ant_dist.sort()
+        for dist, ant_loc, hill_loc in ant_dist:
+            do_move_location(ant_loc, hill_loc)
         #explore the unknown!
         #The more you know: the [:] is a list copy shortcut.  
         #Not a Good Idea to mod the list as we loop through it so we make a copy and loop through that
@@ -91,8 +104,8 @@ class MyBot:
 
         
         # check if we still have time left to calculate more orders
-        if ants.time_remaining() < 10:
-            break
+        #if ants.time_remaining() < 10:
+        #    break
             
 if __name__ == '__main__':
     # psyco will speed up python a little, but is not needed
