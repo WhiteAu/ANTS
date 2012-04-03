@@ -54,58 +54,62 @@ class MyBot:
         #can't step on own hill!
         for hill_loc in ants.my_hills():
             orders[hill_loc] = None
-
-        ant_dist  = []
-        for food_loc in ants.food():
-            for ant_loc in ants.my_ants():
-                dist = ants.distance(ant_loc, food_loc)
-                ant_dist.append((dist,ant_loc,food_loc))
-        ant_dist.sort()
-        for dist, ant_loc, food_loc in ant_dist:
-            if food_loc not in targets and ant_loc not in targets.values():
-                do_move_location(ant_loc, food_loc)
+        
+        def assign_food_missions():
+            ant_dist  = []
+            for food_loc in ants.food():
+                for ant_loc in ants.my_ants():
+                    dist = ants.distance(ant_loc, food_loc)
+                    ant_dist.append((dist,ant_loc,food_loc))
+            ant_dist.sort()
+            for dist, ant_loc, food_loc in ant_dist:
+                if food_loc not in targets and ant_loc not in targets.values():
+                    do_move_location(ant_loc, food_loc)
 
         #Attack Enemy Hills!  THis is HOW WE GET POINTS, so may be worth moving up in priority.
-        for hill_loc, hill_owner in ants.enemy_hills():
-            if hill_loc not in self.hills:
-                self.hills.append(hill_loc)
-        ant_dist = []
-        for hill_loc in self.hills:
-            for ant_loc in ants.my_ants():
-                if ant_loc not in orders.values():
-                    dist = ants.distance(ant_loc, hill_loc)
-                    ant_dist.append((dist, ant_loc, hill_loc))
-        ant_dist.sort()
-        for dist, ant_loc, hill_loc in ant_dist:
-            do_move_location(ant_loc, hill_loc)
+        def assign_hill_attack_missions():
+            for hill_loc, hill_owner in ants.enemy_hills():
+                if hill_loc not in self.hills:
+                    self.hills.append(hill_loc)
+            ant_dist = []
+            for hill_loc in self.hills:
+                for ant_loc in ants.my_ants():
+                    if ant_loc not in orders.values():
+                        dist = ants.distance(ant_loc, hill_loc)
+                        ant_dist.append((dist, ant_loc, hill_loc))
+            ant_dist.sort()
+            for dist, ant_loc, hill_loc in ant_dist:
+                do_move_location(ant_loc, hill_loc)
+
         #explore the unknown!
         #The more you know: the [:] is a list copy shortcut.  
         #Not a Good Idea to mod the list as we loop through it so we make a copy and loop through that
-        for loc in self.unseen[:]:
-            if ants.visible(loc):
-                self.unseen.remove(loc)
-        for ant_loc in ants.my_ants():
-            if ant_loc not in orders.values():
-                unseen_dist = []
-                for unseen_loc in self.unseen:
-                    dist = ants.distance(ant_loc, unseen_loc)
-                    unseen_dist.append((dist, unseen_loc))
-                unsee_dist.sort()
-                for dist, unseen_loc in unseen_dist:
-                    if do_move_location(ant_loc, unseen_loc):
-                        break
-        
-        #unblock own hill so we can keep spawning!
-        for hill_loc in ants.my_hills():
-            if hill_loc in ants.my_ants() and hill_loc not in orders.values():
-                for direction in ('s','e','w','n'):
-                    if do_move_direction(hill_loc, direction):
-                        break
-
-        
-        # check if we still have time left to calculate more orders
-        #if ants.time_remaining() < 10:
-        #    break
+        def explore_nonaimlessly():
+            for loc in self.unseen[:]:
+                if ants.visible(loc):
+                    self.unseen.remove(loc)
+            for ant_loc in ants.my_ants():
+                if ant_loc not in orders.values():
+                    unseen_dist = []
+                    for unseen_loc in self.unseen:
+                        dist = ants.distance(ant_loc, unseen_loc)
+                        unseen_dist.append((dist, unseen_loc))
+                    unsee_dist.sort()
+                    for dist, unseen_loc in unseen_dist:
+                        if do_move_location(ant_loc, unseen_loc):
+                            break
+            
+            #unblock own hill so we can keep spawning!
+            for hill_loc in ants.my_hills():
+                if hill_loc in ants.my_ants() and hill_loc not in orders.values():
+                    for direction in ('s','e','w','n'):
+                        if do_move_direction(hill_loc, direction):
+                            break
+            
+            
+            # check if we still have time left to calculate more orders
+            #if ants.time_remaining() < 10:
+            #    break
             
 if __name__ == '__main__':
     # psyco will speed up python a little, but is not needed
