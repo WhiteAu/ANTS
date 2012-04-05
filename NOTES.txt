@@ -1,0 +1,22 @@
+4/3
+-------------------
+Four things we are after:
+	 - food sources
+	 - enemies
+	 - hills
+	 - extending the boundary
+	
+Strategies:
+	- Expand as much as possible
+		- "Breadcrumb"/risk ants
+		- scout? to make sure there aren't too many enemies
+	- Defense strategy?
+		- Keep some minimum number of ants around the hill
+	- Offensive strategy, mostly
+		- Collect food when convenient and needed
+		- Take over hills
+		
+TO DO THIS WEEK/HAVE DONE BY NEXT MEETING:
+	- SCOTT: do_move_location and do_move_direction - make them not stupid
+	- STEVE: explore_nonaimlessly - prune search space of unseen blocks
+	- SANA: assign_hill_attack_missions (optimize), assign_food_missions (optimize), distance() (make more accurate than manhattan)
