@@ -30,6 +30,11 @@ class MyBot:
     def do_turn(self, ants):
 
         #this tracks all moves made, and prevents our ants from running over each other
+        '''
+        The orders dictionary is used to track what moves we have issued. 
+        In the if statement we have new_loc not in orders which will check 
+        the dictionary keys for us and help prevent collisions. 
+        '''
         orders = {}
         def do_move_direction(loc, direction):
             new_loc = ants.destination(loc,direction)
@@ -39,7 +44,10 @@ class MyBot:
                 return True
             else:
                 return False
-
+        '''
+        targets keeps track of all points of interest.  If a POI has an ant assigned to it,
+        we currently say that no other ant should pursue that target.
+        '''
         targets = {}
         def do_move_location(loc, dest):
             directions = ants.direction(loc, dest)
