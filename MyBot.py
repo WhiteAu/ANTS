@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from ants import *
+from collections import defaultdict
 
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
@@ -55,11 +56,33 @@ class MyBot:
         for hill_loc in ants.my_hills():
             orders[hill_loc] = None
         
+        def betterDist(loc1, loc2):
+            row1, col1 = loc1
+            row2, col2 = loc2
+            cDist = min(abs(col1 - col2), ants.cols - abs(col1 - col2))
+            rDist = min(abs(row1 - row2), ants.rows - abs(row1 - row2))
+            
+            man = cDist + rDist
+            fastest = ants.direction(loc1, loc2)
+            dests = map(lambda x : ants.destination(loc1,x),fastest)
+            if not reduce(lambda x,y: x or y, map(lambda x : ants.passable(x) and x not in orders, dests)):
+                man = man+1
+            return man
+        
+        
+        '''
+        Currently: for every piece of food, assigns the closest available ant
+        Want: smartly decide whether or not to get food. i.e., if its not doing anything/stack of goals?
+        or if its convenient to do so (on the way... a way to break ties?)
+        '''
         def assign_food_missions():
             ant_dist  = []
-            for food_loc in ants.food():
-                for ant_loc in ants.my_ants():
-                    dist = ants.distance(ant_loc, food_loc)
+            freefood = [loc for loc in ants.food() if loc not in targets] # only look at food that does not have someone assigned to it
+            freeants = [ant for ant in ants.my_ants() if ant not in targets.values()] # only consider ants with no mission
+            
+            for food_loc in freefood:
+                for ant_loc in freeants:
+                    dist = betterDist(ant_loc, food_loc)
                     ant_dist.append((dist,ant_loc,food_loc))
             ant_dist.sort()
             for dist, ant_loc, food_loc in ant_dist:
@@ -72,10 +95,12 @@ class MyBot:
                 if hill_loc not in self.hills:
                     self.hills.append(hill_loc)
             ant_dist = []
+            freeants = [ant for ant in ants.my_ants() if ant not in targets.values()] # only consider ants with no mission
+            
             for hill_loc in self.hills:
-                for ant_loc in ants.my_ants():
+                for ant_loc in freeants:
                     if ant_loc not in orders.values():
-                        dist = ants.distance(ant_loc, hill_loc)
+                        dist = betterDist(ant_loc, hill_loc)
                         ant_dist.append((dist, ant_loc, hill_loc))
             ant_dist.sort()
             for dist, ant_loc, hill_loc in ant_dist:
@@ -94,22 +119,26 @@ class MyBot:
                     for unseen_loc in self.unseen:
                         dist = ants.distance(ant_loc, unseen_loc)
                         unseen_dist.append((dist, unseen_loc))
-                    unsee_dist.sort()
+                    unseen_dist.sort()
                     for dist, unseen_loc in unseen_dist:
                         if do_move_location(ant_loc, unseen_loc):
                             break
             
-            #unblock own hill so we can keep spawning!
-            for hill_loc in ants.my_hills():
-                if hill_loc in ants.my_ants() and hill_loc not in orders.values():
-                    for direction in ('s','e','w','n'):
-                        if do_move_direction(hill_loc, direction):
-                            break
-            
-            
-            # check if we still have time left to calculate more orders
-            #if ants.time_remaining() < 10:
-            #    break
+        #unblock own hill so we can keep spawning!
+        for hill_loc in ants.my_hills():
+            if hill_loc in ants.my_ants() and hill_loc not in orders.values():
+                for direction in ('s','e','w','n'):
+                    if do_move_direction(hill_loc, direction):
+                        break
+        
+        assign_food_missions()
+        assign_hill_attack_missions()
+        explore_nonaimlessly()
+        
+        
+        # check if we still have time left to calculate more orders
+        #if ants.time_remaining() < 10:
+        #    break
             
 if __name__ == '__main__':
     # psyco will speed up python a little, but is not needed
