@@ -9,6 +9,7 @@ class MyBot:
     def __init__(self):
         self.unseen = [] # unseen locations on the map
         self.hills = [] # enemy ant hills
+        self.our_ants = [] #all our ants that aren't assigned to other stuff.  Cutting down list comprehension stuff
         self.food_targets = {} # targets that are food 
         self.hill_targets = {} # targets that are enemy hills
         self.targets = {} # targets that are an empty piece of land
@@ -139,22 +140,6 @@ class MyBot:
     
         return False
     
-    '''
-    # Figures out how to move next to get closer to the destination
-    def do_move_location(self, ants, orders, loc, dest, target_type):
-        directions = ants.direction(loc,dest)
-        shuffle(directions)
-        for direction in directions:
-            if self.do_move_direction(ants, orders, loc, direction):
-                if target_type == 'FOOD':
-                    self.food_targets[dest] = loc
-                elif target_type == 'HILL':
-                    self.hill_targets[dest] = loc
-                else:
-                    self.targets[dest] = loc
-                return True
-        return False
-    '''
     
     # Updates the targets to reflect when an ant moves
     def update_targets(self, orders, targets):
@@ -170,11 +155,15 @@ class MyBot:
     
     def hunt_food(self, ants, orders):
         food = [floc for floc in ants.food() if floc not in self.food_targets]
-        antz = [aloc for aloc in ants.my_ants() if aloc not in list(self.food_targets.values() + self.hill_targets.values() + self.food_targets.values())]
+        antz = [aloc for aloc in ants.my_ants() if aloc not in list(self.food_targets.values() + self.hill_targets.values())]
         
         ant_dist = []
         for food_loc in food:
             for ant_loc in antz:
+                if ants.time_remaining() < 10:
+                    self.out.write('We hit the break in food loc.\n')
+                    self.out.flush()
+                    break
                 dist = ants.distance(ant_loc, food_loc)
                 ant_dist.append((dist, ant_loc, food_loc))
         ant_dist.sort()
@@ -193,13 +182,15 @@ class MyBot:
         
         for hill_loc in self.hills:    
             self.out.write('WE FOUND A HILLLLLLLlllll\n')
-            self.out.flush()
+            #self.out.flush()
             for ant_loc in antz:
                 if ants.time_remaining() < 10:
+                    self.out.write('We hit the break in hunt hills.\n')
+                    self.out.flush()
                     break
                 
-                self.out.write('assigning ants!\n')
-                self.out.flush()
+                self.out.write('assigning ants to kill enemy hill!\n')
+                #self.out.flush()
                 if ant_loc not in targs:
                     self.do_move_location(ants, orders, ant_loc, hill_loc, 'HILL')
     
@@ -209,9 +200,17 @@ class MyBot:
             if ants.visible(loc):
                 self.unseen.remove(loc)
         for ant_loc in ants.my_ants():
+            if ants.time_remaining() < 10:
+                    self.out.write('We hit the break in explore.\n')
+                    self.out.flush()
+                    break
             if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
                 unseen_dist = []
                 for unseen_loc in self.unseen:
+                    if ants.time_remaining() < 10:
+                        self.out.write('We hit the 2nd break in explore.\n')
+                        self.out.flush()
+                        break
                     if ants.passable(unseen_loc):
                         dist = ants.distance(ant_loc, unseen_loc)
                         unseen_dist.append((dist, unseen_loc))
@@ -258,16 +257,18 @@ class MyBot:
         #self.explore(ants, orders)
         
         # default move
+        
         for ant_loc in ants.my_ants():
+            if ants.time_remaining() < 10:
+                break
+        
             if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
                 directions = ['n','e','s','w']
                 shuffle(directions)
                 for direction in directions:
                     if self.do_move_direction(ants, orders, ant_loc, direction):
-                        break
-                        if ants.time_remaining() < 10:
-                            break
-        
+                        break #used to be break but that doesn't make sense...
+                        
         
         self.update_targets(orders, self.food_targets)
         self.update_targets(orders, self.hill_targets)
