@@ -53,6 +53,7 @@ class Ants():
         self.attackradius2 = 0
         self.spawnradius2 = 0
         self.turns = 0
+        self.mission = None #member var to reduce reliance on list comprehensions
 
     def setup(self, data):
         'parse initial input and setup starting game state'
