@@ -2,6 +2,28 @@
 from ants import *
 from random import shuffle
 
+class Ant:
+    def __init__(self, loc):
+        self.loc = loc
+        self.next_loc = None
+        self.path = [] #to store an A* path to a far away goal
+        self.mission = None
+
+     # Moves an ant in loc in the direction dir. Checks for possible collisions and
+    # map blocks before doing so.
+    #UPDATED: passing in an ant and adding the locs to it!
+    def do_move_direction(self, ants, orders,  direction):
+        new_loc = ants.destination(self.loc, direction)
+        if (ants.unoccupied(new_loc) and new_loc not in orders and loc not in orders.values()):
+            ants.issue_order((loc, direction))
+            orders[new_loc] = loc
+            self.next_loc = new_loc
+            return True
+        else:
+            return False
+
+        
+
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
 # it will also run the do_turn method for us
@@ -10,6 +32,7 @@ class MyBot:
         self.unseen = [] # unseen locations on the map
         self.hills = [] # enemy ant hills
         self.our_ants = [] #all our ants that aren't assigned to other stuff.  Cutting down list comprehension stuff
+        self.ant_objs = [] #all our ants as ant objects
         self.food_targets = {} # targets that are food 
         self.hill_targets = {} # targets that are enemy hills
         self.targets = {} # targets that are an empty piece of land
@@ -23,6 +46,7 @@ class MyBot:
                 if (ants.passable((row,col))):
                     self.unseen.append((row,col))
     
+    '''
     # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
     def do_move_direction(self, ants, orders, loc, direction):
@@ -33,6 +57,9 @@ class MyBot:
             return True
         else:
             return False
+    '''
+    
+   
               
     # More accurate heuristic for distance
     def betterDist(self, ants, orders, loc1, loc2):
@@ -244,7 +271,9 @@ class MyBot:
         # get off my lawn!
         for hill_loc in ants.my_hills():
             orders[hill_loc] = None
-        
+            #add new ants as they get spawned in
+            new_ant = Ant(hill_loc)
+            self.ant_objs.append(new_ant) #add the new ant to our list!
         
         # don't forget about the old targets!
         for (tar_loc, ant_loc) in self.food_targets.items():
@@ -279,20 +308,33 @@ class MyBot:
         #self.explore(ants, orders)
         
         # default move
-        
+        '''
         for ant_loc in ants.my_ants():
             if ants.time_remaining() < 10:
                 break
         
             #if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
-            if ant_loc.mission not in ['FOOD', 'HILL', 'MOVE']:
+            #if ant_loc.mission not in ['FOOD', 'HILL', 'MOVE']:
                 directions = ['n','e','s','w']
                 shuffle(directions)
                 for direction in directions:
                     if self.do_move_direction(ants, orders, ant_loc, direction):
                         break #used to be break but that doesn't make sense...
-                        
+        '''                
+        for ant_loc in self.ant_objs:
+            if ants.time_remaining() < 10:
+                break
         
+            #if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
+            if ant_loc.mission is None:
+                directions = ['n','e','s','w']
+                shuffle(directions)
+                for direction in directions:
+                    if self.do_move_direction(ants, orders, ant_loc, direction):
+                        break #used to be break but that doesn't make sense...
+        
+
+
         self.update_targets(orders, self.food_targets)
         self.update_targets(orders, self.hill_targets)
         self.update_targets(orders, self.targets)
