@@ -32,7 +32,7 @@ class MyBot:
         self.unseen = [] # unseen locations on the map
         self.hills = [] # enemy ant hills
         self.our_ants = [] #all our ants that aren't assigned to other stuff.  Cutting down list comprehension stuff
-        self.ant_objs = [] #all our ants as ant objects
+        self.ant_objs = set() #all our ants as ant objects
         self.food_targets = {} # targets that are food 
         self.hill_targets = {} # targets that are enemy hills
         self.targets = {} # targets that are an empty piece of land
@@ -269,11 +269,21 @@ class MyBot:
         orders = {} # tracks what moves have been
         
         # get off my lawn!
+        #get rid of old ants
+        for antums in ant_objs:
+            if ants.map[antums.new_loc[0]][antums.new_loc[1]] == ants.DEAD:
+                ant_objs.remove(antums)
+            else:
+                antums.loc = antums.new_loc
+                antums.new_loc = None
+
+        #so add a new ant IF a new ant spawned there.
         for hill_loc in ants.my_hills():
             orders[hill_loc] = None
             #add new ants as they get spawned in
-            new_ant = Ant(hill_loc)
-            self.ant_objs.append(new_ant) #add the new ant to our list!
+            if ants.map[hill_loc[0]][hill_loc[1]] == ants.MY_ANT:
+                new_ant = Ant(hill_loc)
+                self.ant_objs.add(new_ant) #add the new ant to our list!
         
         # don't forget about the old targets!
         for (tar_loc, ant_loc) in self.food_targets.items():
