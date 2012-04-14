@@ -12,7 +12,7 @@ class Ant:
      # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
     #UPDATED: passing in an ant and adding the locs to it!
-    def do_move_direction(self, ants, orders,  direction):
+    def do_move_direction(self, ants, orders, direction):
         new_loc = ants.destination(self.loc, direction)
         if (ants.unoccupied(new_loc) and new_loc not in orders and loc not in orders.values()):
             ants.issue_order((loc, direction))
@@ -22,7 +22,97 @@ class Ant:
         else:
             return False
 
+        #'''   
+    # Figures out how to move next to get closer to the destination
+    # Returns true if an ant can be assigned a target, false otherwise
+    def do_move_location(self, world, orders, dest, target_type):
+        if ants.time_remaining() < 10:
+            return False
         
+        if (ants.distance(self.loc, dest) == 1): #then there is no reason to run A*/no blockage possible
+            d = ants.direction(loc, dest)[0]
+            if self.do_move_direction(ants, orders, d):
+                if target_type == 'FOOD':
+                    self.mission = 'FOOD'
+                    world.food_targets[dest] = self.loc
+                elif target_type == 'HILL':
+                    self.mission = 'HILL'
+                    world.hill_targets[dest] = self.loc
+                else:
+                    self.mission = 'MOVE' #maybe should be more verbose?
+                    world.targets[dest] = self.loc
+                return True
+            else:
+                ants.mission = None
+                return False
+        
+        closedset = []
+        openset = [self.loc]
+        came_from = {}
+    
+        g_score = {}
+        h_score = {}
+        f_score = {}
+    
+        g_score[loc] = 0
+        h_score[loc] = self.betterDist(ants, orders, self.loc, dest)
+        f_score[loc] = g_score[self.loc] + h_score[self.loc]
+        
+        while openset:
+            current = min(f_score, key = lambda x: f_score.get(x))
+    
+            if current == dest:
+                self.path = trace_path(came_from, dest)
+                if len(path) < 2:
+                    ants.mission = None
+                    return False
+                directions = ants.direction(self.loc,path[1])
+                if self.do_move_direction(ants, orders, loc, directions[0]):
+                    if target_type == 'FOOD':
+                        ants.mission = 'FOOD'
+                        self.food_targets[dest] = self.loc
+                    elif target_type == 'HILL':
+                        ants.mission = 'HILL'
+                        self.hill_targets[dest] = self.loc
+                    else:
+                        ants.mission = 'MOVE'
+                        self.targets[dest] = self.loc
+                    return True
+                else:
+                    ants.mission = None
+                    return False
+    
+            
+            del f_score[current]
+            openset.remove(current)
+            closedset.append(current)
+    
+            # explore possible directions
+            aroundMe = [ants.destination(current, d) for d in ['n','s','e','w']]
+            neighbors = [nloc for nloc in aroundMe if ants.passable(nloc) and nloc not in closedset]
+            
+            for neighbor in neighbors:
+                if neighbor in closedset:
+                    continue
+    
+                tentative_g_score = g_score[current] + 1
+                if neighbor not in openset:
+                    openset.append(neighbor)
+                    h_score[neighbor] = self.betterDist(ants, orders, neighbor, dest)
+                    tentative_is_better = True
+                elif tentative_g_score < g_score[neighbor]:
+                    tentative_is_better = True
+                else:
+                    tentative_is_better = False
+    
+                if tentative_is_better:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
+       
+        ants.mission = None            
+        return False
+
 
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
@@ -267,9 +357,9 @@ class MyBot:
     
     def do_turn(self, ants): 
         orders = {} # tracks what moves have been
-        
-        # get off my lawn!
-        #get rid of old ants
+      
+        #get off my lawn!
+        #get rid of old ants, otherwise update locations (old loc <- new loc)
         for antums in ant_objs:
             if ants.map[antums.new_loc[0]][antums.new_loc[1]] == ants.DEAD:
                 ant_objs.remove(antums)
@@ -285,6 +375,8 @@ class MyBot:
                 new_ant = Ant(hill_loc)
                 self.ant_objs.add(new_ant) #add the new ant to our list!
         
+
+        #NOTE: these propagation fn's need to get switched out with path stuff.
         # don't forget about the old targets!
         for (tar_loc, ant_loc) in self.food_targets.items():
             if tar_loc in ants.food():
@@ -308,6 +400,7 @@ class MyBot:
                 self.hills.remove(tar_loc)
                 ant_loc.mission = None
         
+
         # attack any hills we see
         self.hunt_hills(ants, orders)
 
