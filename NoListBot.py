@@ -22,7 +22,97 @@ class Ant:
         else:
             return False
 
+        #'''   
+    # Figures out how to move next to get closer to the destination
+    # Returns true if an ant can be assigned a target, false otherwise
+    def do_move_location(self, ants, orders, dest, target_type):
+        if ants.time_remaining() < 10:
+            return False
         
+        if (ants.distance(self.loc, dest) == 1): # then there is no reason to run A*/no blockage possible
+            d = ants.direction(loc, dest)[0]
+            if self.do_move_direction(ants, orders, self.loc, d):
+                if target_type == 'FOOD':
+                    ants.mission = 'FOOD'
+                    self.food_targets[dest] = self.loc
+                elif target_type == 'HILL':
+                    ants.mission = 'HILL'
+                    self.hill_targets[dest] = self.loc
+                else:
+                    ants.mission = 'MOVE' #maybe should be more verbose?
+                    self.targets[dest] = self.loc
+                return True
+            else:
+                ants.mission = None
+                return False
+        
+        closedset = []
+        openset = [self.loc]
+        came_from = {}
+    
+        g_score = {}
+        h_score = {}
+        f_score = {}
+    
+        g_score[loc] = 0
+        h_score[loc] = self.betterDist(ants, orders, self.loc, dest)
+        f_score[loc] = g_score[self.loc] + h_score[self.loc]
+        
+        while openset:
+            current = min(f_score, key = lambda x: f_score.get(x))
+    
+            if current == dest:
+                path = self.trace_path(came_from, dest)
+                if len(path) < 2:
+                    ants.mission = None
+                    return False
+                directions = ants.direction(self.loc,path[1])
+                if self.do_move_direction(ants, orders, loc, directions[0]):
+                    if target_type == 'FOOD':
+                        ants.mission = 'FOOD'
+                        self.food_targets[dest] = self.loc
+                    elif target_type == 'HILL':
+                        ants.mission = 'HILL'
+                        self.hill_targets[dest] = self.loc
+                    else:
+                        ants.mission = 'MOVE'
+                        self.targets[dest] = self.loc
+                    return True
+                else:
+                    ants.mission = None
+                    return False
+    
+            
+            del f_score[current]
+            openset.remove(current)
+            closedset.append(current)
+    
+            # explore possible directions
+            aroundMe = [ants.destination(current, d) for d in ['n','s','e','w']]
+            neighbors = [nloc for nloc in aroundMe if ants.passable(nloc) and nloc not in closedset]
+            
+            for neighbor in neighbors:
+                if neighbor in closedset:
+                    continue
+    
+                tentative_g_score = g_score[current] + 1
+                if neighbor not in openset:
+                    openset.append(neighbor)
+                    h_score[neighbor] = self.betterDist(ants, orders, neighbor, dest)
+                    tentative_is_better = True
+                elif tentative_g_score < g_score[neighbor]:
+                    tentative_is_better = True
+                else:
+                    tentative_is_better = False
+    
+                if tentative_is_better:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
+       
+        ants.mission = None            
+        return False
+
 
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
@@ -325,7 +415,7 @@ class MyBot:
             if ants.time_remaining() < 10:
                 break
         
-            #if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
+            if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
             if ant_loc.mission is None:
                 directions = ['n','e','s','w']
                 shuffle(directions)
