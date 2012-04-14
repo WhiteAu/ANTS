@@ -12,7 +12,7 @@ class Ant:
      # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
     #UPDATED: passing in an ant and adding the locs to it!
-    def do_move_direction(self, ants, orders,  direction):
+    def do_move_direction(self, ants, orders, direction):
         new_loc = ants.destination(self.loc, direction)
         if (ants.unoccupied(new_loc) and new_loc not in orders and loc not in orders.values()):
             ants.issue_order((loc, direction))
@@ -25,22 +25,22 @@ class Ant:
         #'''   
     # Figures out how to move next to get closer to the destination
     # Returns true if an ant can be assigned a target, false otherwise
-    def do_move_location(self, ants, orders, dest, target_type):
+    def do_move_location(self, world, orders, dest, target_type):
         if ants.time_remaining() < 10:
             return False
         
-        if (ants.distance(self.loc, dest) == 1): # then there is no reason to run A*/no blockage possible
+        if (ants.distance(self.loc, dest) == 1): #then there is no reason to run A*/no blockage possible
             d = ants.direction(loc, dest)[0]
-            if self.do_move_direction(ants, orders, self.loc, d):
+            if self.do_move_direction(ants, orders, d):
                 if target_type == 'FOOD':
-                    ants.mission = 'FOOD'
-                    self.food_targets[dest] = self.loc
+                    self.mission = 'FOOD'
+                    world.food_targets[dest] = self.loc
                 elif target_type == 'HILL':
-                    ants.mission = 'HILL'
-                    self.hill_targets[dest] = self.loc
+                    self.mission = 'HILL'
+                    world.hill_targets[dest] = self.loc
                 else:
-                    ants.mission = 'MOVE' #maybe should be more verbose?
-                    self.targets[dest] = self.loc
+                    self.mission = 'MOVE' #maybe should be more verbose?
+                    world.targets[dest] = self.loc
                 return True
             else:
                 ants.mission = None
@@ -62,7 +62,7 @@ class Ant:
             current = min(f_score, key = lambda x: f_score.get(x))
     
             if current == dest:
-                path = self.trace_path(came_from, dest)
+                self.path = trace_path(came_from, dest)
                 if len(path) < 2:
                     ants.mission = None
                     return False
@@ -358,13 +358,25 @@ class MyBot:
     def do_turn(self, ants): 
         orders = {} # tracks what moves have been
         
-        # get off my lawn!
+        #get off my lawn!
+        #get rid of old ants, otherwise update locations (old loc <- new loc)
+        for antums in ant_objs:
+            if ants.map[antums.new_loc[0]][antums.new_loc[1]] == ants.DEAD:
+                ant_objs.remove(antums)
+            else:
+                antums.loc = antums.new_loc
+                antums.new_loc = None
+
+        #so add a new ant IF a new ant spawned there.
         for hill_loc in ants.my_hills():
             orders[hill_loc] = None
             #add new ants as they get spawned in
-            new_ant = Ant(hill_loc)
-            self.ant_objs.append(new_ant) #add the new ant to our list!
+            if ants.map[hill_loc[0]][hill_loc[1]] == ants.MY_ANT:
+                new_ant = Ant(hill_loc)
+                self.ant_objs.add(new_ant) #add the new ant to our list!
         
+
+        #NOTE: these propagation fn's need to get switched out with path stuff.
         # don't forget about the old targets!
         for (tar_loc, ant_loc) in self.food_targets.items():
             if tar_loc in ants.food():
@@ -388,6 +400,7 @@ class MyBot:
                 self.hills.remove(tar_loc)
                 ant_loc.mission = None
         
+
         # attack any hills we see
         self.hunt_hills(ants, orders)
 
@@ -415,7 +428,7 @@ class MyBot:
             if ants.time_remaining() < 10:
                 break
         
-            if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
+            #if ant_loc not in list(self.targets.values() + self.hill_targets.values() + self.food_targets.values()):
             if ant_loc.mission is None:
                 directions = ['n','e','s','w']
                 shuffle(directions)
