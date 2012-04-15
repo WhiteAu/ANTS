@@ -15,42 +15,43 @@ class Ant:
     # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
     #UPDATED: ant object calls this and updates accordingly
-    def do_move_direction(self, world, orders, direction):
+    def do_move_direction(self, world, ant_list, direction):
         new_loc = world.destination(self.loc, direction)
+        orders = [ant.next_loc for ant in ant_list if ant.next_loc != None]
         if (world.unoccupied(new_loc) and new_loc not in orders):
             world.issue_order((self.loc, direction))
-            orders[new_loc] = loc
-            self.path.pop(0)
+            self.next_loc = self.path.pop(0)
             return True
         else:
+            self.next_loc = None
             return False
 
     # Figures out how to move next to get closer to the destination
     # Returns true if an ant can be assigned a target, false otherwise
     
-    def do_move_location(self, world, orders, dest, target_type):
+    def do_move_location(self, world, ant_list):
+        # If there isn't enough time, don't bother -- MOVE TO BEFORE CALCULATING A*????????
         if world.time_remaining() < 10:
             return False
         
-        if (world.distance(self.loc, dest) == 1): #then there is no reason to run A*/no blockage possible
-            d = world.direction(loc, dest)[0]
-            if self.do_move_direction(world, orders, d):
-                if target_type == 'FOOD':
-                    self.mission = 'FOOD'
-                    bot.food_targets[dest] = self.loc
-                elif target_type == 'HILL':
-                    self.mission = 'HILL'
-                    bot.hill_targets[dest] = self.loc
-                else:
-                    self.mission = 'MOVE' #maybe should be more verbose?
-                    bot.targets[dest] = self.loc
-                return True
-            else:
-                self.mission = None
-                return False
+        if self.mission_type == None or self.mission_loc == None:
+            return False # whoever called this, didn't do it right!!!!!! :[
+        
+        
+        if  not self.path: # the path is empty, we need to use A* to get the path
+            self.path = self.get_next_five_moves()
+
+        # Send the ant along its way...
+        d = world.direction(loc, self.path[0])[0]
+        return self.do_move_direction(world, ant_list, d):
+    
+    # Runs A* and returns the next five moves
+    def get_next_five_moves():
+        dest = self.mission_loc
+        loc = self.loc
         
         closedset = []
-        openset = [self.loc]
+        openset = [loc]
         came_from = {}
     
         g_score = {}
@@ -58,33 +59,17 @@ class Ant:
         f_score = {}
     
         g_score[loc] = 0
-        h_score[loc] = self.betterDist(world, orders, self.loc, dest)
-        f_score[loc] = g_score[self.loc] + h_score[self.loc]
+        h_score[loc] = self.betterDist(world, ant_list, loc, dest)
+        f_score[loc] = g_score[loc] + h_score[loc]
         
         while openset:
             current = min(f_score, key = lambda x: f_score.get(x))
     
             if current == dest:
-                self.path = trace_path(came_from, dest)
-                if len(path) < 2:
-                    self.mission = None
-                    return False
-                directions = ants.direction(self.loc,path[1])
-                if self.do_move_direction(ants, orders, loc, directions[0]):
-                    if target_type == 'FOOD':
-                        self.mission = 'FOOD'
-                        bot.food_targets[dest] = self.loc
-                    elif target_type == 'HILL':
-                        ants.mission = 'HILL'
-                        bot.hill_targets[dest] = self.loc
-                    else:
-                        ants.mission = 'MOVE'
-                        bot.targets[dest] = self.loc
-                    return True
-                else:
-                    self.mission = None
-                    return False
-    
+                self.path = trace_path(came_from, dest)[1:5]
+
+                directions = ants.direction(self.loc,self.path[0])
+                return self.do_move_direction(world, ant_list, directions[0]):
             
             del f_score[current]
             openset.remove(current)
@@ -112,13 +97,11 @@ class Ant:
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
                     f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
-       
-        self.mission = None            
+                 
         return False
     
     # More accurate heuristic for distance
-    
-    def betterDist(self, bot, world, orders, loc1, loc2):
+    def betterDist(self, world, ant_list, loc1, loc2):
         row1, col1 = loc1
         row2, col2 = loc2
         cDist = min(abs(col1 - col2), world.cols - abs(col1 - col2))
@@ -127,11 +110,12 @@ class Ant:
         man = cDist + rDist
         if man<=1:
             return man
-    
+        
+        orders = [ant.next_loc for ant in ant_list if ant.next_loc != None]
         fastest = world.direction(loc1, loc2)
         dests = map(lambda x : world.destination(loc1,x),fastest)
-        if not reduce(lambda x,y: x or y, map(lambda x : world.passable(x) and x not in bot.orders, bot.dests)):
-            man = man
+        if not reduce(lambda x,y: x or y, map(lambda x : world.passable(x) and x not in orders, dests)):
+            man = man + 1
         return man    
    
 # define a class with a do_turn method
@@ -240,7 +224,10 @@ class MyBot:
             
             if world.map[antums.loc[0]][antums.loc[1]] == DEAD:
                     our_ants.remove(antums)
-                
+            if antums.loc == antum.mission_loc:
+                antums.mission_loc = None
+                antums.mission_type = None
+            
             # Continue on target
             if antums.mission_type == None:
                     avail_ants.add(antums) # this is an available ant
