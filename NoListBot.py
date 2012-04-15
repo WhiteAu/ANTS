@@ -154,28 +154,30 @@ class MyBot:
                     self.unseen.append((row,col))
     
     def hunt_food(self, world, avail_ants):
-        food = [floc for floc in world.food() if floc not in self.food_targets]
-        antz = [aloc for aloc in self.our_ants if aloc not in list(self.food_targets.values() + self.hill_targets.values())]
-        #antz = [aloc for aloc in world.my_ants() if aloc not in list(self.food_targets.values() + self.hill_targets.values())]
-        
-        
-        ant_dist = []
+        # Get set of food locations that do not already have an ant assigned to them
+        food = set([floc for floc in world.food()])
+        food_ants = set([ant.mission_loc for ant in self.our_ants if ant.mission == 'FOOD'])
+        food = food.difference(food_ants)
+                
+        # Loop over unassigned food locs, and assign minimum distance ant to each
+        min_dist = {}
+        min_ant = {}
         for food_loc in food:
-            for ant in antz:
+            min_dist[food_loc] = 10000
+            min_ant[food_loc] = None
+            for ant in avail_ants:
                 if world.time_remaining() < LOW_TIME:
                     self.out.write('We hit the break in food loc.\n')
                     self.finish_turn()
                     self.out.flush()
                     break
+
                 dist = world.distance(ant.loc, food_loc)
-                ant_dist.append((dist, ant, food_loc))
-        ant_dist.sort()
-        for dist, ant, food_loc in ant_dist:
-            #Because of our ant_loc mission check above
-            if food_loc not in self.food_targets:
-                self.do_move_location(world, orders, ant, food_loc, 'FOOD')
+                if dist < min_dist[food_loc] and ant not in min_ant.values():
+                    min_ant[food_loc] = ant
+                    min_dist[food_loc] = dist
+
         
-    
     def hunt_hills(self, world, avail_ants):      
         #add newly discovered enemy hills to our master list!
         for hill_loc, hill_owner in world.enemy_hills():
