@@ -12,38 +12,38 @@ class Ant:
      # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
     #UPDATED: passing in an ant and adding the locs to it!
-    def do_move_direction(self, ants, orders, direction):
-        new_loc = ants.destination(self.loc, direction)
-        if (ants.unoccupied(new_loc) and new_loc not in orders and loc not in orders.values()):
-            ants.issue_order((loc, direction))
+    def do_move_direction(self, bot, world, orders, direction):
+        new_loc = world.destination(self.loc, direction)
+        if (world.unoccupied(new_loc) and new_loc not in bot.orders and loc not in bot.orders.values()):
+            world.issue_order((loc, direction))
             orders[new_loc] = loc
             self.next_loc = new_loc
             return True
         else:
             return False
 
-        #'''   
+
     # Figures out how to move next to get closer to the destination
     # Returns true if an ant can be assigned a target, false otherwise
-    def do_move_location(self, world, orders, dest, target_type):
-        if ants.time_remaining() < 10:
+    def do_move_location(self, bot, world, orders, dest, target_type):
+        if world.time_remaining() < 10:
             return False
         
-        if (ants.distance(self.loc, dest) == 1): #then there is no reason to run A*/no blockage possible
-            d = ants.direction(loc, dest)[0]
-            if self.do_move_direction(ants, orders, d):
+        if (world.distance(self.loc, dest) == 1): #then there is no reason to run A*/no blockage possible
+            d = world.direction(loc, dest)[0]
+            if self.do_move_direction(world, orders, d):
                 if target_type == 'FOOD':
                     self.mission = 'FOOD'
-                    world.food_targets[dest] = self.loc
+                    bot.food_targets[dest] = self.loc
                 elif target_type == 'HILL':
                     self.mission = 'HILL'
-                    world.hill_targets[dest] = self.loc
+                    bot.hill_targets[dest] = self.loc
                 else:
                     self.mission = 'MOVE' #maybe should be more verbose?
-                    world.targets[dest] = self.loc
+                    bot.targets[dest] = self.loc
                 return True
             else:
-                ants.mission = None
+                self.mission = None
                 return False
         
         closedset = []
@@ -55,7 +55,7 @@ class Ant:
         f_score = {}
     
         g_score[loc] = 0
-        h_score[loc] = self.betterDist(ants, orders, self.loc, dest)
+        h_score[loc] = self.betterDist(world, orders, self.loc, dest)
         f_score[loc] = g_score[self.loc] + h_score[self.loc]
         
         while openset:
@@ -64,22 +64,22 @@ class Ant:
             if current == dest:
                 self.path = trace_path(came_from, dest)
                 if len(path) < 2:
-                    ants.mission = None
+                    self.mission = None
                     return False
                 directions = ants.direction(self.loc,path[1])
                 if self.do_move_direction(ants, orders, loc, directions[0]):
                     if target_type == 'FOOD':
-                        ants.mission = 'FOOD'
-                        self.food_targets[dest] = self.loc
+                        self.mission = 'FOOD'
+                        bot.food_targets[dest] = self.loc
                     elif target_type == 'HILL':
                         ants.mission = 'HILL'
-                        self.hill_targets[dest] = self.loc
+                        bot.hill_targets[dest] = self.loc
                     else:
                         ants.mission = 'MOVE'
-                        self.targets[dest] = self.loc
+                        bot.targets[dest] = self.loc
                     return True
                 else:
-                    ants.mission = None
+                    self.mission = None
                     return False
     
             
@@ -88,8 +88,8 @@ class Ant:
             closedset.append(current)
     
             # explore possible directions
-            aroundMe = [ants.destination(current, d) for d in ['n','s','e','w']]
-            neighbors = [nloc for nloc in aroundMe if ants.passable(nloc) and nloc not in closedset]
+            aroundMe = [world.destination(current, d) for d in ['n','s','e','w']]
+            neighbors = [nloc for nloc in aroundMe if world.passable(nloc) and nloc not in closedset]
             
             for neighbor in neighbors:
                 if neighbor in closedset:
@@ -98,7 +98,7 @@ class Ant:
                 tentative_g_score = g_score[current] + 1
                 if neighbor not in openset:
                     openset.append(neighbor)
-                    h_score[neighbor] = self.betterDist(ants, orders, neighbor, dest)
+                    h_score[neighbor] = self.betterDist(world, orders, neighbor, dest)
                     tentative_is_better = True
                 elif tentative_g_score < g_score[neighbor]:
                     tentative_is_better = True
@@ -110,10 +110,26 @@ class Ant:
                     g_score[neighbor] = tentative_g_score
                     f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
        
-        ants.mission = None            
+        self.mission = None            
         return False
 
-
+    # More accurate heuristic for distance
+    def betterDist(self, bot, world, orders, loc1, loc2):
+        row1, col1 = loc1
+        row2, col2 = loc2
+        cDist = min(abs(col1 - col2), world.cols - abs(col1 - col2))
+        rDist = min(abs(row1 - row2), world.rows - abs(row1 - row2))
+    
+        man = cDist + rDist
+        if man<=1:
+            return man
+    
+        fastest = world.direction(loc1, loc2)
+        dests = map(lambda x : world.destination(loc1,x),fastest)
+        if not reduce(lambda x,y: x or y, map(lambda x : world.passable(x) and x not in bot.orders, bot.dests)):
+            man = man
+        return man    
+     
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
 # it will also run the do_turn method for us
@@ -150,7 +166,7 @@ class MyBot:
     '''
     
    
-              
+    '''          
     # More accurate heuristic for distance
     def betterDist(self, ants, orders, loc1, loc2):
         row1, col1 = loc1
@@ -167,7 +183,7 @@ class MyBot:
         if not reduce(lambda x,y: x or y, map(lambda x : ants.passable(x) and x not in orders, dests)):
             man = man
         return man    
-     
+     '''
      
     def trace_path(self, came_from, current_node):    
         if current_node in came_from:
@@ -303,19 +319,21 @@ class MyBot:
                 self.do_move_location(ants, orders, ant_loc, food_loc, 'FOOD')
         
     
-    def hunt_hills(self, ants, orders):
+    def hunt_hills(self, world, orders):
         targs = list(self.targets.values() + self.hill_targets.values() + self.food_targets.values())
-        antz = [aloc for aloc in ants.my_ants() if aloc not in targs]
-        
-        for hill_loc, hill_owner in ants.enemy_hills():
+        antz = [aloc for aloc in world.my_ants() if aloc not in targs]
+        ob_ants = [antums for antums in self.ant_objs if antums.mission is None]
+
+        for hill_loc, hill_owner in world.enemy_hills():
             if hill_loc not in self.hills:
                 self.hills.append(hill_loc)        
         
         for hill_loc in self.hills:    
             self.out.write('WE FOUND A HILLLLLLLlllll\n')
             #self.out.flush()
-            for ant_loc in antz:
-                if ants.time_remaining() < 10:
+            #for ant_loc in antz:
+            for antums in ob_ants:
+                if world.time_remaining() < 10:
                     self.out.write('We hit the break in hunt hills.\n')
                     self.finish_turn()
                     self.out.flush()
@@ -323,8 +341,9 @@ class MyBot:
                 
                 self.out.write('assigning ants to kill enemy hill!\n')
                 #self.out.flush()
-                if ant_loc not in targs:
-                    self.do_move_location(ants, orders, ant_loc, hill_loc, 'HILL')
+                if antums.loc not in targs:
+                    #self.do_move_location(world, orders, ant_loc, hill_loc, 'HILL')
+                    antums.do_move_location(world, orders, ant_loc, hill_loc, 'HILL')
     
     
     def explore(self, ants, orders): # make sure we aren't targetting walls?
