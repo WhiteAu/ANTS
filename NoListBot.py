@@ -3,7 +3,9 @@
 from ants import *
 from random import shuffle
 
-
+LOW_TIME = 30
+HILL_ATTACK_MAX = 6 #no more than N ants go after any given enemy hill
+HILL_NOTICE_DIST = 30 #assign ants to hills no more than N manhattan squares away
 class Ant:
     def __init__(self, loc):
         self.loc = loc
@@ -160,7 +162,7 @@ class MyBot:
         ant_dist = []
         for food_loc in food:
             for ant in antz:
-                if world.time_remaining() < 10:
+                if world.time_remaining() < LOW_TIME:
                     self.out.write('We hit the break in food loc.\n')
                     self.finish_turn()
                     self.out.flush()
@@ -174,32 +176,27 @@ class MyBot:
                 self.do_move_location(world, orders, ant, food_loc, 'FOOD')
         
     
-    def hunt_hills(self, world, avail_ants):
-        targs = list(self.targets.values() + self.hill_targets.values() + self.food_targets.values())
-        antz = [aloc for aloc in self.our_ants if aloc not in targs]
-        #antz = [aloc for aloc in world.my_ants() if aloc not in targs]
-        #ob_ants = [antums for antums in self.our_ants if antums.mission is None]
-
+    def hunt_hills(self, world, avail_ants):      
+        #add newly discovered enemy hills to our master list!
         for hill_loc, hill_owner in world.enemy_hills():
             if hill_loc not in self.hills:
                 self.hills.append(hill_loc)        
         
+        #for each enemy hill, assign up to HILL_ATTACK_MAX nearby ants to go after it
         for hill_loc in self.hills:    
-            self.out.write('WE FOUND A HILLLLLLLlllll\n')
-            #self.out.flush()
-            for ant in antz:
-            #for antums in ob_ants:
-                if world.time_remaining() < 10:
-                    self.out.write('We hit the break in hunt hills.\n')
-                    self.finish_turn()
-                    self.out.flush()
-                    break
-                
-                #self.out.write('assigning ants to kill enemy hill!\n')
-                #self.out.flush()
-                if ant.loc not in targs:
-                    self.do_move_location(world, orders, ant, hill_loc, 'HILL')
-                    #antums.do_move_location(world, orders, ant_loc, hill_loc, 'HILL')
+            avail = set(avail_ants)
+            count = 0
+            while (count < HILL_ATTACK_MAX):
+                for ant in avail:
+                    if world.time_remaining() < LOW_TIME:
+                        break
+                    if world.distance(ant.loc, hill_loc) <= HILL_NOTICE_DIST: #only do it if it's marginally close...
+                        ant.mission_loc = hill_loc
+                        ant.mission_type = 'HILL'
+                        avail_ants.remove(ant)
+                        self.do_move_location(world, avail_ants)
+                count += 1
+                    
     
     
     def explore(self, world, avail_ants): # make sure we aren't targetting walls?
@@ -207,7 +204,7 @@ class MyBot:
             if world.visible(loc):
                 self.unseen.remove(loc)
         for ant_loc in world.my_ants():
-            if world.time_remaining() < 10:
+            if world.time_remaining() < LOW_TIME:
                     self.out.write('We hit the break in explore.\n')
                     world.finish_turn()
                     self.out.flush()
@@ -217,7 +214,7 @@ class MyBot:
             #if ant_loc.mission is None:
                 unseen_dist = []
                 for unseen_loc in self.unseen:
-                    if world.time_remaining() < 10:
+                    if world.time_remaining() < LOW_TIME:
                         self.out.write('We hit the 2nd break in explore.\n')
                         world.finish_turn()
                         self.out.flush()
