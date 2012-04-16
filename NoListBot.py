@@ -55,8 +55,8 @@ class Ant:
         dest = self.mission_loc
         loc = self.loc
         
-        closedset = []
-        openset = [loc]
+        closedset = set()
+        openset = set([loc])
         came_from = {}
     
         g_score = {}
@@ -72,14 +72,12 @@ class Ant:
     
             if current == dest:
                 self.path = self.trace_path(came_from, dest)[1:5]
-                #if self.path:
                 return True
-                #else:
-                #    return False
+                
             
             del f_score[current]
             openset.remove(current)
-            closedset.append(current)
+            closedset.add(current)
     
             # explore possible directions
             aroundMe = [world.destination(current, d) for d in ['n','s','e','w']]
@@ -91,7 +89,7 @@ class Ant:
     
                 tentative_g_score = g_score[current] + 1
                 if neighbor not in openset:
-                    openset.append(neighbor)
+                    openset.add(neighbor)
                     h_score[neighbor] = self.betterDist(world, ant_list, neighbor, dest)
                     tentative_is_better = True
                 elif tentative_g_score < g_score[neighbor]:
@@ -291,7 +289,7 @@ class MyBot:
         self.update_ant_list(world, avail_ants)
 
         # attack any hills we see
-        #self.hunt_hills(world, avail_ants)
+        self.hunt_hills(world, avail_ants)
 
         # hunt for more food
         self.hunt_food(world, avail_ants)
