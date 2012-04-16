@@ -231,14 +231,52 @@ class MyBot:
                 for dist, unseen_loc in unseen_dist:
                     if self.do_move_location(world, self.our_ants):
                         break
+
+    def bound(self, world, loc):
+        return (loc[0]%world.rows, loc[1]%world.cols)
+
+    def random_location(self, world):
+        x = (random.randint(0, world.rows - 1), random.randint(0, world.cols - 1))
+        #while ants.visible(x) and not ants.passable(x):
+        #while not ants.passable(x) and not self.time_check(ants):
+        #    x = (random.randint(0, ants.rows), random.randint(0, ants.cols))
+        return x
+
+    def bread_crumb(self, world, avail_ants):
+        expansions = [(3,0),(0,3),(-3,0),(0,-3), (5,0), (0,5), (-5,0), (0,-5)]
+        
+        for ant in set(avail_ants):
+            u = []
+            for e in expansions:
+                loc = self.bound(world, (ant.loc[0] + e[0], ant.loc[1] + e[1]))
+                if (not world.visible(loc)) and world.passable(loc):
+                    u.append(loc)
+            if len(u) != 0:
+                random.shuffle(u)
+                ant.mission_type = 'BREAD'
+                ant.mission_loc = u[0]
+                ant.do_move_location(world, self.our_ants)
+                avail_ants.remove(ant)
+                
+            #else:
+            #    r = self.random_location(world)
+            #    if (not world.passable(r)): #or r in world.my_hills():
+            #        continue
+            #    ant.mission_type = 'EXPLORE'
+            #    ant.mission_loc = r
+            #    ant.do_move_location(world, self.our_ants)
+            #    avail_ants.remove(ant)
+                
+
     
     def update_ant_list(self, world, avail_ants):
         for hill_loc in world.my_hills():
             #add new ants as they get spawned in
-            if hill_loc in world.my_ants():
+            if hill_loc in world.my_ants() and hill_loc not in [ant.loc for ant in self.our_ants]:
                 new_ant = Ant(hill_loc)
                 self.our_ants.add(new_ant) #add the new ant to our list!
                 break
+
         
         for antums in set(self.our_ants):
             # Update locations of ants that have moved
@@ -293,6 +331,8 @@ class MyBot:
 
         # hunt for more food
         self.hunt_food(world, avail_ants)
+        
+        self.bread_crumb(world, avail_ants)
         
         # explore the map!
         #self.explore(world, avail_ants)
