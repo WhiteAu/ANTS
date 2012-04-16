@@ -20,7 +20,7 @@ class Ant:
     def do_move_direction(self, world, ant_list, direction):
         new_loc = world.destination(self.loc, direction)
         orders = [ant.next_loc for ant in ant_list if ant.next_loc != None]
-        if (world.unoccupied(new_loc) and new_loc not in orders):
+        if (world.unoccupied(new_loc) and new_loc not in orders and new_loc not in world.my_hills()):
             world.issue_order((self.loc, direction))
             self.next_loc = new_loc
             return True
@@ -34,18 +34,18 @@ class Ant:
         if self.mission_type == None or self.mission_loc == None or self.next_loc != None:
             return False # whoever called this, didn't do it right!!!!!! :[
         
-        if not self.path: # the path is empty, we need to use A* to get the path
+        if len(self.path) == 0: # the path is empty, we need to use A* to get the path
             self.get_next_five_moves(world, ant_list)
 
-        if self.path:
+        if len(self.path) > 0:
             d = world.direction(self.loc, self.path[0])[0]
             if self.do_move_direction(world, ant_list, d):
                 self.next_loc = self.path.pop(0)
                 return True
             else:
-                return False
+                return False # Got next moves, but couldn't execute
         else:
-            return False
+            return False # Couldn't get next five moves...
     
     # Runs A* and returns the next five moves
     def get_next_five_moves(self, world, ant_list):
@@ -72,10 +72,10 @@ class Ant:
     
             if current == dest:
                 self.path = self.trace_path(came_from, dest)[1:5]
-                if self.path:
-                    return True
-                else:
-                    return False
+                #if self.path:
+                return True
+                #else:
+                #    return False
             
             del f_score[current]
             openset.remove(current)
@@ -179,6 +179,7 @@ class MyBot:
                 ant.mission_loc = food_loc
                 ant.mission_type = "FOOD"
                 ant.do_move_location(world, self.our_ants)
+                avail_ants.remove(ant)
 
         
     def hunt_hills(self, world, avail_ants):      
@@ -254,7 +255,7 @@ class MyBot:
             
             # Remove ants that don't exist anymore
             if world.map[antums.loc[0]][antums.loc[1]] == DEAD:
-                our_ants.remove(antums)
+                self.our_ants.remove(antums)
             
             
             # Continue on target
@@ -264,7 +265,7 @@ class MyBot:
                 avail_ants.add(antums) # this is an available ant
             elif antums.mission_type == "FOOD":
                 if antums.mission_loc in world.food(): # check if food is still there
-                    antums.do_move_location(ants, self.our_ants) #if yes, continue moving that way
+                    antums.do_move_location(world, self.our_ants) #if yes, continue moving that way
                 else: # otherwise, ABORT MISSION!
                     antums.mission_type = None
                     antums.mission_loc = None
