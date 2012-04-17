@@ -1,3 +1,68 @@
+4/17 (wow that was a long gap...)
+--------------------
+PROGRESS: Version 1.suck DONE!
+State of the bot right now:
+	- Food: assign each food location to nearest ant/greedy/non-optimal
+	- Razing hills: if a hill is seen, 6(?) closest ants within 30 blocks are sent towards it
+	- Exploring: random movement/breadcrumb [steve will fill this in, don't know what it means]
+	- Defense against other ants: nothing - just surrender/die!
+
+	- Accomplishments: wooo doesn't timeout! Except that it does.
+	- Problems: Timeouts/python sucks
+	
+ANALYSIS OF CURRENT STATE: Things we suck at/need to improve
+	- Lazy ants - lots of standing around -- tell them to exploooore!
+	- Lots of ants dying b/c of single file -- need some collaboration
+		- General Clustering
+		- Buddy system while exploring? 
+		- Collaboration/meet up before attacking hills
+	- Food along the way is still ignored?
+	- IDEA: use squads! defenders of our hill, explorers/hunter/gatherers, hill attackers
+
+Possible motif for presentation: pop songs
+
+EXPERIMENTAL DESIGN
+Variables:
+	- Map types & terrains
+	- Game parameters [food drop rate, # turns, # starting hills, # opponents]
+	- Opponents (sample vs submission bots)
+	- One on one vs. free for all
+
+Metrics:
+	- Points at end of game
+	- Quickness of winning
+
+Experiment 1: Testing against a variety of bots
+Run each experiment one-on-one. Control all game parameters and terrain *** NEED TO CHOOSE MAP? CELL_MAZE_P02_18? ***, and keep other parameters the same as in play_one_game.sh
+Independent Variable: opponents
+	1) xarthis
+	2) HunterBot
+	3)
+	4)
+	5)
+
+Experiment 2: Testing on variety of terrains
+Run each experiment one-on-one. Control all parameters. *** NEED TO CHOOSE OPPONENT ***. All other parameters are from play_one_game.sh ?
+Independent variable: maps - pick one from each category
+	1) Random Walk
+	2) Cell Maze
+	3) Maze
+
+*******NEXT STEPS:*********
+	- SANA: 1) make sure food along the way is collected (or do we not care?). Optimize so that A* paths are calculated (so we don't calculate the same path repeatedly). 2) Create scripts for experiments
+	- STEVE: Exploring doing something not stupid
+	- SCOTT: FIGHTING!!
+
+NEXT MEETINGS: 
+	- Thu 4/19 @ 2pm - Experiment Meeting #1
+	- Sat 4/21 @ 2pm - Experiment Meeting #2
+	- Tue 4//24 @ 2:30pm - Experiment Meeting #3
+	- Thu 4/26 @ 2pm - Last Experiment Meeting #4 / Start write up for paper!
+	- Sat 4/28 @ TBD - LAST MEETING EVER (not really), finish & submit write up (due 4/29)
+	- Sometime before 5/2 (how about 5/1?) - Project presentation meeting
+	
+
+
 4/3
 -------------------
 Four things we are after:
