@@ -1,0 +1,9 @@
+This starter package zip was published on Mon Nov  7 07:00:37 UTC 2011.
+
+Last change on this starter package was:
+commit f95ce894f90687d58a95f30cfe65664f1302040f
+Date:   Thu Nov 3 20:30:08 2011 -0400
+
+    Fixed makefile to stop erasing source files with different extensions
+
+Check https://github.com/aichallenge/aichallenge/tree/epsilon/ants/dist/starter_bots/cpp for new versions.
