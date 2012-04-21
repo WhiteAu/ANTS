@@ -35,21 +35,27 @@ class Ant:
             return False # whoever called this, didn't do it right!!!!!! :[
         
         if len(self.path) == 0: # the path is empty, we need to use A* to get the path
-            self.get_next_five_moves(world, ant_list)
-
+            success = self.get_next_five_moves(world, ant_list)
+            if not success: # Wherever we are trying to get is impossible... so don't do this...
+                self.mission_type == None
+                self.mission_loc == None
+                return False
+        
         if len(self.path) > 0:
             d = world.direction(self.loc, self.path[0])[0]
             if self.do_move_direction(world, ant_list, d):
                 self.next_loc = self.path.pop(0)
                 return True
             else:
-                return False # Got next moves, but couldn't execute
+                self.path = [] # Reset path to nothing, forcing A* replan, b/c 
+                return False   # got next moves, but couldn't execute
         else:
-            return False # Couldn't get next five moves...
+            return False # Couldn't get next five moves... I think this is unreachable?
     
     # Runs A* and returns the next five moves
     def get_next_five_moves(self, world, ant_list):
         if world.time_remaining() < LOW_TIME:
+            #self.end_turn()
             return False
 
         dest = self.mission_loc
@@ -64,14 +70,14 @@ class Ant:
         f_score = {}
     
         g_score[loc] = 0
-        h_score[loc] = self.betterDist(world, ant_list, loc, dest)
+        h_score[loc] = 2*self.betterDist(world, ant_list, loc, dest)
         f_score[loc] = g_score[loc] + h_score[loc]
         
         while openset:
             current = min(f_score, key = lambda x: f_score.get(x))
     
             if current == dest:
-                self.path = self.trace_path(came_from, dest)[1:5]
+                self.path = self.trace_path(came_from, dest)[1:]
                 return True
                 
             
@@ -161,9 +167,9 @@ class MyBot:
             min_ant[food_loc] = None
             for ant in avail_ants:
                 if world.time_remaining() < LOW_TIME:
-                    self.out.write('We hit the break in food loc.\n')
-                    self.finish_turn()
-                    self.out.flush()
+                    #self.out.write('We hit the break in food loc.\n')
+                    #self.finish_turn()
+                    #self.out.flush()
                     break
 
                 dist = world.distance(ant.loc, food_loc)
@@ -234,17 +240,20 @@ class MyBot:
 
     def bound(self, world, loc):
         return (loc[0]%world.rows, loc[1]%world.cols)
-
+    
     def random_location(self, world):
         x = (random.randint(0, world.rows - 1), random.randint(0, world.cols - 1))
         #while ants.visible(x) and not ants.passable(x):
         #while not ants.passable(x) and not self.time_check(ants):
         #    x = (random.randint(0, ants.rows), random.randint(0, ants.cols))
         return x
-
+    
     def bread_crumb(self, world, avail_ants):
-        expansions = [(3,0),(0,3),(-3,0),(0,-3), (5,0), (0,5), (-5,0), (0,-5)]
-        
+        #expansions = [(3,0),(0,3),(-3,0),(0,-3),(2,2),(-2,-2),(2,-2),(-2,2),(5,0), (0,5),(-5,0),(0,-5),(6,6),(6,-6),(-6, 6),(6, -6)]
+        #expansions = [(5,0),(0,5),(-5,0),(0,-5),(4,4),(-4,-4),(4,-4),(-4,4),(8,0), (0,8),(-8,0),(0,-8),(7,7),(7,-7),(-7, 7),(7,-7)]
+        r = world.viewradius2
+        expansions = [(r+1,0),(-r-1,0),(0,r+1),(0,-r-1),(2*r,0),(-2*r,0),(0,2*r),(0,-2*r),(r-1,r-1),(-r+1,-r+1),(-r+1,r-1),(r-1,-r+1),((r+r/2),(r+r/2)),(-(r+r/2),(r+r/2)),((r+r/2),-(r+r/2)),(-(r+r/2),-(r+r/2))]
+
         for ant in set(avail_ants):
             u = []
             for e in expansions:
@@ -258,15 +267,15 @@ class MyBot:
                 ant.do_move_location(world, self.our_ants)
                 avail_ants.remove(ant)
                 
-            #else:
-            #    r = self.random_location(world)
-            #    if (not world.passable(r)): #or r in world.my_hills():
-            #        continue
-            #    ant.mission_type = 'EXPLORE'
-            #    ant.mission_loc = r
-            #    ant.do_move_location(world, self.our_ants)
-            #    avail_ants.remove(ant)
-                
+            """elif random.uniform(0, 1) < .1:
+                r = self.random_location(world)
+                if (not world.passable(r)): #or r in world.my_hills():
+                    continue
+                ant.mission_type = 'EXPLORE'
+                ant.mission_loc = r
+                ant.do_move_location(world, self.our_ants)
+                avail_ants.remove(ant)
+             """   
 
     
     def update_ant_list(self, world, avail_ants):
@@ -333,6 +342,7 @@ class MyBot:
         self.hunt_food(world, avail_ants)
         
         self.bread_crumb(world, avail_ants)
+        #self.move_away_from_hills(world, avail_ants)
         
         # explore the map!
         #self.explore(world, avail_ants)
