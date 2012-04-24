@@ -69,8 +69,11 @@ class Ant:
         f_score[loc] = g_score[loc] + h_score[loc]
         
         while openset:
-            current = min(f_score, key = lambda x: f_score.get(x))
-    
+            f = f_score.items()
+            shuffle(f)
+            cval = min(f, key = lambda x: x[1])
+            current = cval[0]
+            
             if current == dest:
                 self.path = self.trace_path(came_from, dest)[1:5]
                 return True
