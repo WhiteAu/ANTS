@@ -222,6 +222,13 @@ class Ants():
                 d.append('w')
         return d
 
+    def getVisible(self, loc):
+        visible = set()
+        a_row, a_col = loc
+        for v_row, v_col in self.vision_offsets_2:
+            visible.add((a_row+v_row, a_col+v_col))
+        return visible
+
     def visible(self, loc):
         ' determine which squares are visible to the given player '
 

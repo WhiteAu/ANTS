@@ -6,6 +6,7 @@ from random import shuffle
 LOW_TIME = 30
 HILL_ATTACK_MAX = 6 #no more than N ants go after any given enemy hill
 HILL_NOTICE_DIST = 30 #assign ants to hills no more than N manhattan squares away
+
 class Ant:
     def __init__(self, loc):
         self.loc = loc
@@ -204,33 +205,46 @@ class MyBot:
     
     
     def explore(self, world, avail_ants): # make sure we aren't targetting walls?
-        for loc in self.unseen[:]:
+        edges = set()
+        for loc in set(self.unseen):
             if world.visible(loc):
                 self.unseen.remove(loc)
-        for ant_loc in world.my_ants():
-            if world.time_remaining() < LOW_TIME:
-                    self.out.write('We hit the break in explore.\n')
-                    world.finish_turn()
-                    self.out.flush()
-                    break
+                if world.passable(loc):
+                    edges.add(loc)
+                
+        
+        dist = []
+        for loc in edges:
+            for ant in set(avail_ants):
+                d = world.distance(ant.loc,loc)
+                dist.append((d, ant, loc))
+        
+        dist.sort()
+        for (d, ant, loc) in dist:
+            if ant in avail_ants and loc in edges:
+                ant.mission_type = 'EXPLORE'
+                ant.mission_loc = loc
+                ant.do_move_location(world, self.our_ants)
+                avail_ants.remove(ant)
+                edges.remove(loc)
+                
+        '''
+        for ant in set(avail_ants):
+            visible = world.getVisible(ant.loc)
             
-            targets = [ant.mission_loc for ant in self.our_ants if ant.mission_type != None]
-            if ant_loc not in targets:
-            #if ant_loc.mission is None:
-                unseen_dist = []
-                for unseen_loc in self.unseen:
-                    if world.time_remaining() < LOW_TIME:
-                        self.out.write('We hit the 2nd break in explore.\n')
-                        world.finish_turn()
-                        self.out.flush()
-                        break
-                    if world.passable(unseen_loc):
-                        dist = world.distance(ant_loc, unseen_loc)
-                        unseen_dist.append((dist, unseen_loc))
-                unseen_dist.sort()
-                for dist, unseen_loc in unseen_dist:
-                    if self.do_move_location(world, self.our_ants):
-                        break
+            perimeter = edges.intersection(visible)
+            perim = []
+            for loc in perimeter:
+                if world.passable(loc):
+                    perim.append(loc)
+            
+            if len(perim) > 0:
+                random.shuffle(perim)
+                ant.mission_type = 'EXPLORE'
+                ant.mission_loc = perim[0]
+                ant.do_move_location(world, self.our_ants)
+                avail_ants.remove(ant)
+           '''
 
     def bound(self, world, loc):
         return (loc[0]%world.rows, loc[1]%world.cols)
@@ -332,10 +346,10 @@ class MyBot:
         # hunt for more food
         self.hunt_food(world, avail_ants)
         
-        self.bread_crumb(world, avail_ants)
-        
         # explore the map!
-        #self.explore(world, avail_ants)
+        self.explore(world, avail_ants)
+        
+        self.bread_crumb(world, avail_ants)
         
         # default move
         #'''
