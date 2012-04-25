@@ -53,7 +53,9 @@ class Ants():
         self.attackradius2 = 0
         self.spawnradius2 = 0
         self.turns = 0
-        self.mission = None #member var to reduce reliance on list comprehensions
+        
+        # cache used by neighbourhood_offsets() to determine nearby squares
+        self.offsets_cache = {}
 
     def setup(self, data):
         'parse initial input and setup starting game state'
@@ -83,6 +85,81 @@ class Ants():
         self.map = [[LAND for col in range(self.cols)]
                     for row in range(self.rows)]
 
+    def neighbourhood_offsets(self, max_dist):
+        """ Return a list of squares within a given distance of loc
+
+            Loc is not included in the list
+            For all squares returned: 0 < distance(loc,square) <= max_dist
+
+            Offsets are calculated so that:
+              -height <= row+offset_row < height (and similarly for col)
+              negative indicies on self.map wrap thanks to python
+        """
+        if max_dist not in self.offsets_cache:
+            offsets = []
+            mx = int(sqrt(max_dist))
+            for d_row in range(-mx,mx+1):
+                for d_col in range(-mx,mx+1):
+                    d = d_row**2 + d_col**2
+                    if 0 < d <= max_dist:
+                        offsets.append((
+                            #d_row%self.height-self.height,
+                            d_row%self.rows-self.rows,
+                            #d_col%self.width-self.width
+                            d_col%self.cols-self.cols
+                        ))
+            self.offsets_cache[max_dist] = offsets
+        return self.offsets_cache[max_dist]
+
+    def nearby_ants(self, loc, max_dist, exclude=None):
+        """ Returns ants where 0 < dist to loc <= sqrt(max_dist)
+
+            If exclude is not None, ants with owner == exclude
+              will be ignored.
+        """
+        ants = 0
+        #ants = []
+        row, col = loc
+        for d_row, d_col in self.neighbourhood_offsets(max_dist):
+            if ANTS <= self.map[row+d_row][col+d_col] != exclude:
+                n_loc = self.destination(loc, (d_row, d_col))
+                #ants.append(self.current_ants[n_loc])
+                ants += 1 #add another ant!
+        return ants
+
+    def eval_attack_damage(self):
+        """ Kill ants which take more than 1 damage in a turn
+        
+        Each ant deals 1/#nearby_enemy damage to each nearby enemy.
+        (nearby enemies are those within the attackradius)
+        Any ant with at least 1 damage dies.
+        Damage does not accumulate over turns
+        (ie, ants heal at the end of the battle).
+        """
+        damage = defaultdict(Fraction)
+        nearby_enemies = {}
+        
+        # each ant damages nearby enemies
+        for ant in self.current_ants.values():
+            enemies = self.nearby_ants(ant.loc, self.attackradius, ant.owner)
+            if enemies:
+                nearby_enemies[ant] = enemies
+                strenth = 10 # dot dot dot
+                if ant.orders[-1] == '-':
+                    strenth = 10
+                else:
+                    strenth = 10
+                    damage_per_enemy = Fraction(strenth, len(enemies)*10)
+                    for enemy in enemies:
+                        damage[enemy] += damage_per_enemy
+                        if damage[enemy] >= 1:
+                            score += 1 #score goes up cause we killed an ant
+                            
+        # kill ants with at least 1 damage
+        for ant in damage:
+            if damage[ant] >= 1:
+                score -= 1 #then the score of this combat goes down (we lost an ant)
+    
     def update(self, data):
         'parse engine input and update the game state'
         # start timer

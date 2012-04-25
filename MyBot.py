@@ -1,18 +1,25 @@
-
+../
 #!/usr/bin/env python
 from ants import *
 from random import shuffle
 
 LOW_TIME = 30
-HILL_ATTACK_MAX = 6 #no more than N ants go after any given enemy hill
+HILL_ATTACK_MAX = 10 #no more than N ants go after any given enemy hill
 HILL_NOTICE_DIST = 30 #assign ants to hills no more than N manhattan squares away
+MINIMAX_DEPTH = 2 #how deep to perform minimax.  Want to keep this fairly low
+ATTACK_DIST = 5 # how far away to try and sic enemy ants from
+BUDDY_DIST = 6 # how far away to posse up to fight enemy ants
+
+BEST_VAL = -10000
 class Ant:
     def __init__(self, loc):
         self.loc = loc
+        self.try_loc = None
         self.path = [] #to store an A* path to a far away goal
         self.next_loc = None # assigned in next immediate turn
         self.mission_type = None # string hill, food, or land
         self.mission_loc = None
+        self.poss_moves = []
 
     # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
@@ -147,6 +154,125 @@ class MyBot:
                 if (ants.passable((row,col))):
                     self.unseen.append((row,col))
     
+
+    '''
+       def do_attack_damage(self):
+        """ Kill ants which take more than 1 damage in a turn
+
+            Each ant deals 1/#nearby_enemy damage to each nearby enemy.
+              (nearby enemies are those within the attackradius)
+            Any ant with at least 1 damage dies.
+            Damage does not accumulate over turns
+              (ie, ants heal at the end of the battle).
+        """
+        damage = defaultdict(Fraction)
+        nearby_enemies = {}
+
+        # each ant damages nearby enemies
+        for ant in self.current_ants.values():
+            enemies = self.nearby_ants(ant.loc, self.attackradius, ant.owner)
+            if enemies:
+                nearby_enemies[ant] = enemies
+                strenth = 10 # dot dot dot
+                if ant.orders[-1] == '-':
+                    strenth = 10
+                else:
+                    strenth = 10
+                damage_per_enemy = Fraction(strenth, len(enemies)*10)
+                for enemy in enemies:
+                    damage[enemy] += damage_per_enemy
+
+        # kill ants with at least 1 damage
+        for ant in damage:
+            if damage[ant] >= 1:
+                self.kill_ant(ant)
+    '''
+
+    #Sana is a busta and steals rhymesnshit
+    def evaluate_moves (self, world, attack_rad2, near_buddies, near_enemies):
+        total = 0
+        for ant in near_buddies:
+            if near_enemies:
+                for enemy in near_enemies: 
+                    if (world.distance(ant.try_loc, enemy.try_loc) < attack_rad2):
+                        offset = world.nearby_ants(ant.try_loc, world.attackradius2, MY_ANT) -  world.nearby_ants(enemy.try_loc, world.attackradius2, OTHER)
+                        if offset > 0:
+                            total += 1
+                        elif offset < 0:
+                            total -= 1   
+        return total
+                            
+                    
+    def gen_attck_moves(self, world, ant_list):
+        total_locs = set()
+        for ant in ant_list:
+            aroundMe = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
+            #only care about unique moves
+            neighbors = [nloc for nloc in aroundMe if world.passable(nloc) and nloc not in total_locs]
+            total_locs.union(neighbors)
+            ant.poss_moves = neighbors
+        
+
+    def max_step(self, idx, world, attack_rad2, near_buddies, near_enemies):
+        if idx < len(near_buddies):
+            ant = near_buddies[idx]
+            for move in ant.poss_moves:
+                ant.try_loc = move
+                self.max_step(idx+1, world, attack_rad2, near_buddies, near_enemies)
+        else:
+            value = self.min_step(0, world, attack_rad2, near_buddies, near_enemies)
+            if value > BEST_VAL:
+                BEST_VAL = value
+                #save current best move!
+                for ant in near_buddies:
+                    ant.loc = ant.try_loc
+    
+    def min_step(self, idx, world, attack_rad2, near_buddies, near_enemies):
+        if idx < len(near_enemies):
+            min_val = 10000
+            ant = near_enemies[idx]
+            for move in ant.poss_moves:
+                ant.try_loc = move
+                value = self.min_step(idx+1, world, attack_rad2, near_buddies, near_enemies)
+                if value < BEST_VAL:
+                    return -10000
+                if value < min_val:
+                    min_val = value
+            return min_val
+        else:
+            return self.evaluate_moves(world, attack_rad2, near_buddies, near_enemies)
+
+    def fight_ants(self, world, avail_ants):
+        enemies = set([Ant(enemy[0]) for enemy in world.enemy_ants()])
+        attack_rad2 = world.attackradius2
+        #for each of our ants, perform depth-n minimax against enemies up to 5 squares away
+        
+        for ant in set(avail_ants):
+            BEST_VAL = -10000 #Because screw infinity
+
+            #need a better way to find enemy ants in proximity to a given ant...
+
+            #How to also remove from avail ants and enemies in one swoop? Want a list and 
+            #not a set to be able to iterate over them in a tricky way
+            near_buddies = [buddy for buddy in avail_ants if world.distance(ant.loc, buddy.loc) < BUDDY_DIST]
+            for ant_friend in near_buddies:
+                avail_ants.remove(ant_friend)
+
+            near_enemies = [enemy for enemy in enemies if world.distance(ant.loc, enemy.loc) < ATTACK_DIST]
+            for bad_friend in near_enemies:
+                enemies.remove(bad_friend)
+
+            if near_enemies:
+                #generate all the possible next moves for our/enemy ants
+                self.gen_attck_moves(world, near_buddies)
+                self.gen_attck_moves(world, near_enemies)
+                self.max_step(0, world, attack_rad2, near_buddies, near_enemies)
+                #find ants nearby our ant
+                i = 0
+            
+                
+            
+
     def hunt_food(self, world, avail_ants):
         # Get set of food locations that do not already have an ant assigned to them
         food = set([floc for floc in world.food()])
@@ -323,8 +449,13 @@ class MyBot:
     def do_turn(self, world): 
         avail_ants = set() # ants that are available at this turn
         
+        
         # Update our_ants list (remove dead ants, update ant locations, add newly spawned ants)
         self.update_ant_list(world, avail_ants)
+        
+
+        # KILL ALL ANTZ
+        self.fight_ants(world, avail_ants)
 
         # attack any hills we see
         self.hunt_hills(world, avail_ants)
