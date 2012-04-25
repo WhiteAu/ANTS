@@ -111,7 +111,7 @@ class Ants():
             self.offsets_cache[max_dist] = offsets
         return self.offsets_cache[max_dist]
 
-    def nearby_ants(self, loc, max_dist, exclude=None):
+    def nearby_ants(self, loc, max_dist):
         """ Returns ants where 0 < dist to loc <= sqrt(max_dist)
 
             If exclude is not None, ants with owner == exclude
@@ -121,12 +121,28 @@ class Ants():
         #ants = []
         row, col = loc
         for d_row, d_col in self.neighbourhood_offsets(max_dist):
-            if ANTS <= self.map[row+d_row][col+d_col] != exclude:
-                n_loc = self.destination(loc, (d_row, d_col))
+            if ANTS <= self.map[row+d_row][col+d_col] == MY_ANT:
+                #n_loc = self.direction(loc, (d_row, d_col))
                 #ants.append(self.current_ants[n_loc])
                 ants += 1 #add another ant!
         return ants
 
+    def nearby_enemies(self, loc, max_dist):
+        """ Returns ants where 0 < dist to loc <= sqrt(max_dist)
+    
+            If exclude is not None, ants with owner == exclude
+              will be ignored.
+        """
+        ants = 0
+        #ants = []
+        row, col = loc
+        for d_row, d_col in self.neighbourhood_offsets(max_dist):
+            if ANTS <= self.map[row+d_row][col+d_col] != MY_ANT:
+                #n_loc = self.destination(loc, (d_row, d_col))
+                #ants.append(self.current_ants[n_loc])
+                ants += 1 #add another ant!
+        return ants
+    
     def eval_attack_damage(self):
         """ Kill ants which take more than 1 damage in a turn
         
@@ -137,7 +153,7 @@ class Ants():
         (ie, ants heal at the end of the battle).
         """
         damage = defaultdict(Fraction)
-        nearby_enemies = {}
+        nearby_antsies = {}
         
         # each ant damages nearby enemies
         for ant in self.current_ants.values():
@@ -306,6 +322,7 @@ class Ants():
             visible.add((a_row+v_row, a_col+v_col))
         return visible
 
+    
     def visible(self, loc):
         ' determine which squares are visible to the given player '
 

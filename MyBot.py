@@ -1,4 +1,3 @@
-../
 #!/usr/bin/env python
 from ants import *
 from random import shuffle
@@ -9,13 +8,13 @@ LOW_TIME = 30
 HILL_ATTACK_MAX = 10 # no more than N ants go after any given enemy hill
 MAX_NOTICE_DIST = 30 # assign ants to food/missions no more than N manhattan squares away -- that
 MINIMAX_DEPTH = 2 #how deep to perform minimax.  Want to keep this fairly low
-ATTACK_DIST = 5 # how far away to try and sic enemy ants from
+ATTACK_DIST = 2 # how far away to try and sic enemy ants from
 BUDDY_DIST = 6 # how far away to posse up to fight enemy ants
 BEST_VAL = -10000
 WALLS = set()
 
 class Ant:
-    def __init__(self, loc):
+    def __init__(self, loc, owner):
         self.loc = loc
         self.try_loc = None
         self.path = [] #to store an A* path to a far away goal
@@ -24,6 +23,9 @@ class Ant:
         self.mission_loc = None
         self.wait = 0
         self.poss_moves = []
+        self.owner = owner
+        
+        self.best_loc = None
 
 
     # Moves an ant in loc in the direction dir. Checks for possible collisions and
@@ -220,11 +222,11 @@ class MyBot:
             if near_enemies:
                 for enemy in near_enemies: 
                     if (world.distance(ant.try_loc, enemy.try_loc) < attack_rad2):
-                        offset = world.nearby_ants(ant.try_loc, world.attackradius2, MY_ANT) -  world.nearby_ants(enemy.try_loc, world.attackradius2, OTHER)
+                        offset = world.nearby_enemies(ant.try_loc, world.attackradius2) -  world.nearby_ants(enemy.try_loc, world.attackradius2)
                         if offset > 0:
-                            total += 1
+                            total -= 1
                         elif offset < 0:
-                            total -= 1   
+                            total += 1 
         return total
                             
                     
@@ -233,12 +235,16 @@ class MyBot:
         for ant in ant_list:
             aroundMe = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
             #only care about unique moves
-            neighbors = [nloc for nloc in aroundMe if world.passable(nloc) and nloc not in total_locs]
+            neighbors = [nloc for nloc in aroundMe if nloc not in WALLS and nloc not in total_locs]
             total_locs.union(neighbors)
             ant.poss_moves = neighbors
         
 
     def max_step(self, idx, world, attack_rad2, near_buddies, near_enemies):
+        global BEST_VAL
+        if world.time_remaining() < LOW_TIME:
+            return False
+    
         if idx < len(near_buddies):
             ant = near_buddies[idx]
             for move in ant.poss_moves:
@@ -250,9 +256,12 @@ class MyBot:
                 BEST_VAL = value
                 #save current best move!
                 for ant in near_buddies:
-                    ant.loc = ant.try_loc
+                    ant.best_loc = ant.try_loc
+        
     
     def min_step(self, idx, world, attack_rad2, near_buddies, near_enemies):
+        if world.time_remaining() < LOW_TIME:
+            return False
         if idx < len(near_enemies):
             min_val = 10000
             ant = near_enemies[idx]
@@ -268,32 +277,50 @@ class MyBot:
             return self.evaluate_moves(world, attack_rad2, near_buddies, near_enemies)
 
     def fight_ants(self, world, avail_ants):
-        enemies = set([Ant(enemy[0]) for enemy in world.enemy_ants()])
+        enemies = set([Ant(enemy[0], enemy[1]) for enemy in world.enemy_ants()])
         attack_rad2 = world.attackradius2
         #for each of our ants, perform depth-n minimax against enemies up to 5 squares away
         
+        
         for ant in set(avail_ants):
+            global BEST_VAL
             BEST_VAL = -10000 #Because screw infinity
 
             #need a better way to find enemy ants in proximity to a given ant...
 
             #How to also remove from avail ants and enemies in one swoop? Want a list and 
             #not a set to be able to iterate over them in a tricky way
-            near_buddies = [buddy for buddy in avail_ants if world.distance(ant.loc, buddy.loc) < BUDDY_DIST]
-            for ant_friend in near_buddies:
-                avail_ants.remove(ant_friend)
-
-            near_enemies = [enemy for enemy in enemies if world.distance(ant.loc, enemy.loc) < ATTACK_DIST]
+            near_enemies = [enemy for enemy in enemies if world.distance(ant.loc, enemy.loc) < attack_rad2 + ATTACK_DIST]
+            if len(near_enemies) == 0:
+                continue
+            
             for bad_friend in near_enemies:
                 enemies.remove(bad_friend)
 
-            if near_enemies:
-                #generate all the possible next moves for our/enemy ants
-                self.gen_attck_moves(world, near_buddies)
-                self.gen_attck_moves(world, near_enemies)
-                self.max_step(0, world, attack_rad2, near_buddies, near_enemies)
-                #find ants nearby our ant
-                i = 0
+            near_buddies = [buddy for buddy in avail_ants if world.distance(ant.loc, buddy.loc) < BUDDY_DIST]
+
+            #generate all the possible next moves for our/enemy ants
+            self.gen_attck_moves(world, near_buddies)
+            self.gen_attck_moves(world, near_enemies)
+            self.max_step(0, world, attack_rad2, near_buddies, near_enemies)
+            
+            for ant in near_buddies:
+                oldmission = ant.mission_loc
+                oldtype = ant.mission_type
+                oldpath = ant.path
+                
+                ant.mission_loc = ant.best_loc
+                ant.mission_type = 'FIGHT'
+                ant.path = []
+                if ant.do_move_location(world, self.our_ants):
+                    avail_ants.remove(ant)
+                    ant.best_loc = None
+                else:
+                    ant.mission_loc = oldmission
+                    ant.mission_type = oldtype
+                    ant.path = oldpath
+            #find ants nearby our ant
+            #i = 0
             
                 
             
@@ -370,14 +397,19 @@ class MyBot:
         reassigned = []
         for (d, ant, loc) in dist:
             if ant in avail_ants and counts[loc] < HILL_ATTACK_MAX:
+                oldmission = ant.mission_type
+                oldloc = ant.mission_loc
+                oldpath = ant.path
+                
                 ant.mission_type = 'HILL'
                 ant.mission_loc = loc
                 if ant.do_move_location(world, self.our_ants):
                     counts[loc] += 1
                     avail_ants.remove(ant)
                 else:
-                    ant.mission_type = None
-                    ant.mission_loc = None
+                    ant.mission_type = oldmission
+                    ant.mission_loc = oldloc
+                    ant.path = oldpath
         
         '''
         #for each enemy hill, assign up to HILL_ATTACK_MAX nearby ants to go after it
@@ -472,7 +504,7 @@ class MyBot:
                 
 
     
-    def update_ant_list(self, world, avail_ants):
+    def update_ant_list(self, world):
         sort_ants = sorted(self.our_ants, key=lambda x : x.wait, reverse=True)
         for antums in set(self.our_ants):
             # Update locations of ants that have moved
@@ -498,54 +530,53 @@ class MyBot:
                 antums.path = []
             
             
-            # Continue on target
-            if antums.mission_type == None:
-                antums.mission_loc = None
-                antums.path = []
-                avail_ants.add(antums) # this is an available ant
-            elif antums.mission_type == "FOOD":
-                if antums.mission_loc in world.food(): # check if food is still there
-                    antums.do_move_location(world, self.our_ants) #if yes, continue moving that way
-                else: # otherwise, ABORT MISSION!
-                    antums.mission_type = None
-                    antums.mission_loc = None
-                    antums.path = []    
-                    avail_ants.add(antums)
-            elif antums.mission_type == "HILL":
-                if antums.mission_loc in self.hills: # still an enemy!
-                    antums.do_move_location(world, self.our_ants)
-                else: # otherwise, the hill is taken over
-                    antums.mission_type = None
-                    antums.mission_loc = None
-                    antums.path = []
-                    avail_ants.add(antums)
-            else: # keep doin what yr doin
-                antums.do_move_location(world, self.our_ants)
-            
         # Check our ant list against the official, add any ants we missed
         ours = [ant.loc for ant in self.our_ants]
         free_agents = set(world.my_ants()).difference(ours)
         for ant_loc in free_agents:
-            new_ant = Ant(ant_loc)
+            new_ant = Ant(ant_loc, MY_ANT)
             self.our_ants.add(new_ant)
-            avail_ants.add(new_ant)
-        
+    
+    def continue_on_target(self, world, avail_ants):
+        for antums in set(avail_ants):
+            logging.debug('In avail ants target things')
+            # Continue on target
+            if antums.mission_type == "FOOD":
+                if antums.mission_loc in world.food(): # check if food is still there
+                    antums.do_move_location(world, self.our_ants) #if yes, continue moving that way
+                    avail_ants.remove(antums)
+                else: # otherwise, ABORT MISSION!
+                    antums.mission_type = None
+                    antums.mission_loc = None
+                    antums.path = []
+            elif antums.mission_type == "HILL":
+                if antums.mission_loc in self.hills: # still an enemy!
+                    antums.do_move_location(world, self.our_ants)
+                    avail_ants.remove(antums)
+                else: # otherwise, the hill is taken over
+                    antums.mission_type = None
+                    antums.mission_loc = None
+                    antums.path = []
+            elif antums.mission_type != None: # keep doin what yr doin
+                antums.do_move_location(world, self.our_ants)
+                avail_ants.remove(antums)
     
     def do_turn(self, world): 
-        avail_ants = set() # ants that are available at this turn
-        
-        
         # Update our_ants list (remove dead ants, update ant locations, add newly spawned ants)
-        self.update_ant_list(world, avail_ants)
-
+        self.update_ant_list(world)
         logging.debug('Done updating the ant list.')
-                
+        
+        avail_ants = set(self.our_ants) # ants that are available at this turn
+        
         # KILL ALL ANTZ
         self.fight_ants(world, avail_ants)
 
         # attack any hills we see
         self.hunt_hills(world, avail_ants)
         logging.debug('Done hunting for hills.')
+        
+        # carry on
+        self.continue_on_target(world, avail_ants)
         
         # hunt for more food
         self.hunt_food(world, avail_ants)
