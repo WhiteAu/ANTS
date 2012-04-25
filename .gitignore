@@ -8,3 +8,4 @@ sanaocd.py
 *~
 tools/game_logs/*
 tools/visualizer/*
+*/*.pyc

@@ -83,12 +83,12 @@ class Ant:
                 return False
                 
             f = f_score.items()
-            shuffle(f)
+            #shuffle(f)
             cval = min(f, key = lambda x: x[1])
             current = cval[0]
             
             if current == dest:
-                self.path = self.trace_path(came_from, dest)[1:5]
+                self.path = self.trace_path(came_from, dest)[1:3]
                 return True
                 
             
@@ -230,11 +230,12 @@ class MyBot:
         
         targets = [ant.mission_loc for ant in self.our_ants if ant.mission_type == 'HILL']
         counts = defaultdict(int)
+        
         dist = []
         for hill_loc in self.hills:
             counts[hill_loc] = targets.count(hill_loc)
-            if counts[hill_loc] > HILL_ATTACK_MAX:
-                for ant in self.our_ants: # for hills, use the full ant list b/c we want to get to the enemy hill as quickly as possible
+            if counts[hill_loc] < HILL_ATTACK_MAX:
+                for ant in avail_ants: # for hills, use the full ant list b/c we want to get to the enemy hill as quickly as possible
                     d = ant.betterDist(world,hill_loc, ant.loc)
                     #if d < MAX_NOTICE_DIST:
                     dist.append((d,ant,hill_loc))
@@ -242,23 +243,15 @@ class MyBot:
         dist.sort()
         reassigned = []
         for (d, ant, loc) in dist:
-            if ant.loc not in reassigned and counts[loc] < HILL_ATTACK_MAX:
-                old_mission = ant.mission_type
-                old_path = ant.path
-                old_mloc = ant.mission_loc
-                
+            if ant in avail_ants and counts[loc] < HILL_ATTACK_MAX:
                 ant.mission_type = 'HILL'
                 ant.mission_loc = loc
-                ant.path = []
                 if ant.do_move_location(world, self.our_ants):
-                    if old_mission == None:
-                        avail_ants.remove(ant)
-                    reassigned.append(ant.loc)
                     counts[loc] += 1
+                    avail_ants.remove(ant)
                 else:
-                    ant.mission_type = old_mission
-                    ant.mission_loc = old_mloc
-                    ant.path = old_path
+                    ant.mission_type = None
+                    ant.mission_loc = None
         
         '''
         #for each enemy hill, assign up to HILL_ATTACK_MAX nearby ants to go after it
