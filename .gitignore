@@ -7,3 +7,4 @@ sanaocd.py
 *.pyc
 *~
 tools/game_logs/*
+tools/visualizer/*
