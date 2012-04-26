@@ -103,10 +103,8 @@ class Ants():
                     d = d_row**2 + d_col**2
                     if 0 < d <= max_dist:
                         offsets.append((
-                            #d_row%self.height-self.height,
-                            d_row%self.rows-self.rows,
-                            #d_col%self.width-self.width
-                            d_col%self.cols-self.cols
+                            (d_row % self.rows) - self.rows,
+                            (d_col % self.cols) - self.cols
                         ))
             self.offsets_cache[max_dist] = offsets
         return self.offsets_cache[max_dist]
@@ -126,7 +124,7 @@ class Ants():
                 #ants.append(self.current_ants[n_loc])
                 ants += 1 #add another ant!
         return ants
-
+        
     def nearby_enemies(self, loc, max_dist):
         """ Returns ants where 0 < dist to loc <= sqrt(max_dist)
     
@@ -322,7 +320,14 @@ class Ants():
             visible.add((a_row+v_row, a_col+v_col))
         return visible
 
-    
+    def getSquaresInRadius(self, loc, radius):
+        '''Returns squares within a radius'''
+        squares = set()
+        row, col = loc
+        for d_row, d_col in self.neighbourhood_offsets(radius):
+            squares.add((row+d_row % self.rows, col+d_col % self.cols))
+        return squares
+        
     def visible(self, loc):
         ' determine which squares are visible to the given player '
 
