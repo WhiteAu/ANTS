@@ -284,8 +284,11 @@ class MyBot:
             return self.evaluate_moves(world, attack_rad2, near_buddies, near_enemies)
             
     def min(self, world, index, buddies, enemies, branchsofar):
+        global BEST_VAL
         if world.time_remaining() < LOW_TIME:
-            return float('inf')
+            #return float('inf')
+            return float('-inf') # assume that this branch was terrible for us
+                                 # since we did not get to evaluate it
         
         if index < len(enemies):
             min_val = float('inf')
@@ -300,7 +303,9 @@ class MyBot:
                 sim = list(branchsofar)
                 sim.append(move)
                 value = self.min(world, index+1, buddies, enemies, sim)
-                if value < BEST_VAL:
+                
+                if value < BEST_VAL: # Min will never choose anything greater than value, so if we already have a branch
+                                     # with a better value, don't bother to evaluate other moves on this branch
                     return float('-inf')
                 if value < min_val:
                     min_val = value
@@ -309,10 +314,14 @@ class MyBot:
             return self.evaluate(world, len(buddies), branchsofar) # get our resulting score from this nonsense
     
     def evaluate(self, world, n, branchsofar):
+        
+        # locations that our ants and the enemy ants will be in for a given move
         us = branchsofar[:n]
         them = branchsofar[n:]
         
         damage = defaultdict(Fraction)
+            
+        # deal damage to our ants from enemy            
         for t in them:
             targs = world.getSquaresInRadius(t, world.attackradius2).intersection(us)
             if len(targs) < 1:
@@ -321,6 +330,7 @@ class MyBot:
             for u in targs:
                 damage[u] += force
         
+        # deal damage to us from enemy
         for u in us:
             targs = world.getSquaresInRadius(u, world.attackradius2).intersection(them)
             if len(targs) < 1:
@@ -328,12 +338,13 @@ class MyBot:
             force = Fraction(10, len(targs)*10)
             for t in targs:
                 damage[t] += force
-        
-        score = 0
+
+        # tabulate score
+        score = 0.0
         for (a, d) in damage.items():
-            if d >= 1:
+            if d >= 1: # a fatal blow was dealt
                 if a in us:
-                    score = score - 1
+                    score -= 1
                 if a in them:
                     score += 1
         
@@ -348,6 +359,7 @@ class MyBot:
         if index == 0:
             BEST_MOVES = branchsofar
             BEST_VAL = float('-inf')
+        
         if index < len(buddies):
             ant = buddies[index]
             
@@ -374,7 +386,10 @@ class MyBot:
             # pick an ant randomly
             ant = sample(ants, 1)[0]
             
+            #rad = 1
             squares = world.getSquaresInRadius(ant.loc, rad)
+            #logging.debug('ant.loc = ' + str(ant.loc) + ' rad = ' + str(rad))
+            #logging.debug('Squares = ' + str(squares))
             enemies = list(squares.intersection(enemy_locs))
             
             if not enemies:
@@ -441,12 +456,14 @@ class MyBot:
         #'''  
         # EXPERIMENTAL
         rad = world.attackradius2 + 4*sqrt(world.attackradius2) + 4 # (radius+2)^2
+        rad = world.attackradius2 + 6*sqrt(world.attackradius2) + 9
+        #rad = world.viewradius2
         enemy_locs = [enemy[0] for enemy in world.enemy_ants()] # enemy locations to do intersections with
         
         # Now sort em into groups!
         # returns groups of (friends, enemies) where both are lists of Ant objs
         groups = self.group_ants(world, set(avail_ants), enemy_locs, rad)
-        
+        logging.debug('Length of groups = ' + str(len(groups)))
         # Now get best fight moves for each group!
         for group in groups:
             logging.debug('Running minimax on group of size... ' + str(len(group[0])) + ' ' + str(len(group[1])))
@@ -754,7 +771,8 @@ class MyBot:
         self.explore(world, avail_ants)
         logging.debug('Done exploring.')
         
-        self.bread_crumb(world, avail_ants)
+        # spread your$elves out!
+        #self.bread_crumb(world, avail_ants)
         
         # default move
         '''

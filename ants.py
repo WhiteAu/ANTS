@@ -102,10 +102,8 @@ class Ants():
                 for d_col in range(-mx,mx+1):
                     d = d_row**2 + d_col**2
                     if 0 < d <= max_dist:
-                        offsets.append((
-                            (d_row % self.rows) - self.rows,
-                            (d_col % self.cols) - self.cols
-                        ))
+                        offsets.append( ( (d_row % self.rows) - self.rows, (d_col % self.cols) - self.cols ))
+                        #offsets.append((d_row, d_col))
             self.offsets_cache[max_dist] = offsets
         return self.offsets_cache[max_dist]
 
@@ -325,7 +323,7 @@ class Ants():
         squares = set()
         row, col = loc
         for d_row, d_col in self.neighbourhood_offsets(radius):
-            squares.add((row+d_row % self.rows, col+d_col % self.cols))
+            squares.add(( (row+d_row) % self.rows, (col+d_col) % self.cols))
         return squares
         
     def visible(self, loc):
