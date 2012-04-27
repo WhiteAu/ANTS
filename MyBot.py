@@ -290,19 +290,24 @@ class MyBot:
             return float('-inf') # assume that this branch was terrible for us
                                  # since we did not get to evaluate it
         
-        if index < len(enemies):
+        if index < len(enemies) + len(buddies):
             min_val = float('inf')
-            ant = enemies[index]
+            ant = enemies[index - len(buddies)]
             
             # needs pruning duhh.. maybe not now though
             neighbs = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
+            neighbs.append(ant.loc)
             moves = [loc for loc in neighbs if loc not in WALLS]
-            moves.append(ant.loc)
+            
+            #if len(moves) < 1:
+            #    return float('inf')
             
             for move in moves:
-                sim = list(branchsofar)
-                sim.append(move)
-                value = self.min(world, index+1, buddies, enemies, sim)
+                #sim = list(branchsofar)
+                #sim.append(move)
+                #value = self.min(world, index+1, buddies, enemies, sim)
+                branchsofar[index] = move
+                value = self.min(world, index+1, buddies, enemies, branchsofar)
                 
                 if value < BEST_VAL: # Min will never choose anything greater than value, so if we already have a branch
                                      # with a better value, don't bother to evaluate other moves on this branch
@@ -311,6 +316,7 @@ class MyBot:
                     min_val = value
             return min_val
         else:
+            #logging.debug(str(branchsofar))
             return self.evaluate(world, len(buddies), branchsofar) # get our resulting score from this nonsense
     
     def evaluate(self, world, n, branchsofar):
@@ -344,11 +350,25 @@ class MyBot:
         for (a, d) in damage.items():
             if d >= 1: # a fatal blow was dealt
                 if a in us:
-                    score -= 1
+                    score -= 1.1
                 if a in them:
                     score += 1
         
+        # The following may or may not do anything...
+        """
+        for u in us:
+            if u in world.food_list:
+                score += 1
+            if damage[u] < 1 and u in world.enemy_hills():
+                score += 10000
+        
+        for t in them:
+            if damage[t] < 1 and t in world.my_hills():
+                score -= 10000
+        """
         return score
+    
+    
     
     def max(self, world, index, buddies, enemies, branchsofar):
         global BEST_VAL, BEST_MOVES
@@ -359,25 +379,41 @@ class MyBot:
         if index == 0:
             BEST_MOVES = branchsofar
             BEST_VAL = float('-inf')
+            branchsofar = range(len(buddies) + len(enemies))
         
         if index < len(buddies):
             ant = buddies[index]
             
             # needs pruning duhh.. maybe not now though
             neighbs = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
+            neighbs.append(ant.loc)
             moves = [loc for loc in neighbs if loc not in WALLS and loc not in branchsofar]
-            moves.append(ant.loc)
+            
+            # This may or may not make any sense...
+            # If outnumbered, assume that moving towards the enemy is going to be a bad idea... maximize distance
+            # and prune out the forward motion.
+            # Reverse for when you 
+            """
+            if len(buddies) > len(enemies):
+                moves = sorted(moves, key=lambda(x): world.distance(x, enemies[0].loc), reverse=False)
+            else:
+                moves = sorted(moves, key=lambda(x): world.distance(x, enemies[0].loc), reverse=True)
+            """
             
             # simulate & continue
-            for move in moves:
-                sim = list(branchsofar)
-                sim.append(move)
-                self.max(world, index+1, buddies, enemies, sim)
+            for move in moves[:3]:
+                #sim = list(branchsofar)
+                #sim.append(move)
+                #self.max(world, index+1, buddies, enemies, sim)
+                branchsofar[index] = move
+                self.max(world, index+1, buddies, enemies, branchsofar)
         else:
-            value = self.min(world, 0, buddies, enemies, branchsofar)
+            value = self.min(world, index, buddies, enemies, branchsofar)
             if value > BEST_VAL:
                 BEST_VAL = value
-                BEST_MOVES = branchsofar
+                BEST_MOVES = list(branchsofar)
+    
+    
     
     def group_ants(self, world, ants, enemy_locs, rad):
         logging.debug("Now we are grouping ants.. ")
@@ -456,7 +492,7 @@ class MyBot:
         #'''  
         # EXPERIMENTAL
         rad = world.attackradius2 + 4*sqrt(world.attackradius2) + 4 # (radius+2)^2
-        rad = world.attackradius2 + 6*sqrt(world.attackradius2) + 9
+        #rad = world.attackradius2 + 6*sqrt(world.attackradius2) + 9 # (radius+3)^2
         #rad = world.viewradius2
         enemy_locs = [enemy[0] for enemy in world.enemy_ants()] # enemy locations to do intersections with
         
