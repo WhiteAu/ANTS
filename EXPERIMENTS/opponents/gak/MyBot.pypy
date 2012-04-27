@@ -1,0 +1,294 @@
+#!/usr/bin/env python
+
+import Queue
+import sys
+import random
+
+
+from ants import *
+
+
+TIME_LEFT_CHECK = 150
+
+
+def log(msg):
+    sys.stderr.write(str(msg) + '\n')
+
+class Ant:
+    def __init__(self, ant_id, pos, bot):
+        self.ant_id = ant_id
+        self.pos = pos
+        self.bot = bot
+        self.set_idle()
+
+    def determine_path(self):
+        self.path = self.bot.pathfind_target(self)
+
+    def set_idle(self):
+        self.job = 'idle'
+        self.target = None
+        self.path = None
+
+    def set_target(self, pos, job):
+        self.job = job
+        self.target = pos
+        self.determine_path()
+
+    def set_food_target(self, pos):
+        self.set_target(pos, 'food')
+
+    def set_explore_target(self, pos):
+        self.set_target(pos, 'explore')
+
+    def set_attack_target(self, pos):
+        self.set_target(pos, 'attack')
+
+    def __repr__(self):
+        return '<Ant %i at %s>' % (self.ant_id, self.pos)
+
+class MyBot:
+    def __init__(self):
+        pass
+
+    def do_setup(self, ants):
+        self.next_ant_id = 0
+
+        self.antsmgr = {}  # id -> Ant
+        self.pos_ant = {}  # pos -> Ant
+        self.food_ant = {}  # food -> Ant
+
+    def do_move_direction(self, ant, directions):
+        random.shuffle(directions)
+        best_direction = None
+        best_score = self.get_tactical_score(ant, ant.pos)
+
+        for direction in directions:
+            pos = self.ants.destination(ant.pos, direction)
+            if not self.ants.unoccupied(pos):
+                continue
+            if pos in self.orders:
+                continue
+
+            score = self.get_tactical_score(ant, pos)
+            if score >= best_score:
+                best_score = score
+                best_direction = direction
+
+        if not best_direction:
+            return
+
+        pos = self.ants.destination(ant.pos, best_direction)
+        self.ants.issue_order((ant.pos, best_direction))
+        self.orders[pos] = True
+        self.remove_ant_pos(ant, ant.pos)
+        self.set_ant_pos(ant, pos)
+        return True
+
+    def get_tactical_score(self, ant, pos):
+        enemies = 0
+        friendlies = 0
+        hills_im_on = 0
+
+        my_hills = self.ants.my_hills()
+
+        for p, team in self.ants.enemy_ants():
+            if self.ants.distance(pos, p) < 6:
+                enemies += 1
+
+        for a in self.antsmgr.itervalues():
+            if a == ant:
+                continue
+            if self.ants.distance(pos, a.pos) < 6:
+                friendlies += 1
+
+        # for p in my_hills:
+        #     if p == pos:
+        #         hills_im_on += 1
+
+        score = friendlies - enemies - hills_im_on
+        if score > 0:
+            score = 0
+        return score
+
+    def set_ant_pos(self, ant, pos):
+        ant.pos = pos
+        self.pos_ant[pos] = ant
+
+    def remove_ant_pos(self, ant, pos):
+        del self.pos_ant[pos]
+        ant.pos = None
+
+    def process_new_ants(self):
+        for pos in self.ants.my_ants():
+            if pos in self.pos_ant:
+                continue
+
+            ant_id = self.next_ant_id
+            self.next_ant_id += 1
+
+            ant = Ant(ant_id, pos, self)
+            self.antsmgr[ant_id] = ant
+            self.set_ant_pos(ant, pos)
+
+    def closest_ant(self, pos, states):
+        best = None
+        for ant in self.antsmgr.values():
+            if states and ant.job not in states:
+                continue
+            dist = self.ants.distance(pos, ant.pos)
+            if not best or bestdist > dist:
+                best = ant
+                bestdist = dist
+        return best
+
+    def process_new_food(self):
+
+        food = self.ants.food()
+        random.shuffle(food)
+        for pos in food:
+            if pos in self.food_ant:
+                continue
+
+            ant = self.closest_ant(pos, ['idle', 'explore'])
+            if not ant:
+                return
+
+            self.food_ant[pos] = ant
+            ant.set_food_target(pos)
+
+    def attack_nearest_hill(self, ant, dist=None):
+        enemy_hills = self.ants.enemy_hills()
+        for pos, owner in enemy_hills:
+            if dist and self.ants.distance(ant.pos, pos) > dist:
+                continue
+            ant.set_attack_target(pos)
+            return True
+
+    def give_ant_something_to_do(self, ant):
+
+        if ant.job in ['idle',]:
+
+            if random.random() < .5:
+                if self.attack_nearest_hill(ant):
+                    return
+
+            for a in range(5):
+                pos = [
+                    random.randint(0, self.ants.rows - 1),
+                    random.randint(0, self.ants.cols - 1)
+                    ]
+                if self.ants.visible(pos):
+                    continue
+            ant.set_explore_target(pos)
+
+    def reset_targets_for_ant(self, ant):
+        if ant.job == 'food':
+            del self.food_ant[ant.target]
+
+    def pathfind_target(self, ant):
+
+        def neighbours(pos):
+            n = []
+            def npp(d):
+                p = self.ants.destination(pos, d)
+                if self.ants.passable(p):
+                    n.append(p)
+            npp('e')
+            npp('w')
+            npp('s')
+            npp('n')
+            return n
+
+        def make_path(toNode, graph):
+            result = []
+            while 'root' != toNode:
+                    result.append(toNode)
+                    toNode = graph[toNode]
+            result.reverse()
+            return result
+
+        q = Queue.Queue()
+        q.put(ant.pos)
+        graph = {ant.pos: 'root'}
+
+
+        path = None
+        while not q.empty():
+            if self.ants.time_remaining() < TIME_LEFT_CHECK:
+                return
+            cur = q.get()
+            for n in neighbours(cur):
+                if n in graph:
+                    continue
+                graph[n] = cur
+                q.put(n)
+
+            if cur == ant.target:
+                path = make_path(ant.target, graph)
+                break
+
+        if path:
+            return path[1:]
+
+    def move_ant_towards_target(self, ant):
+        if not ant.path:
+            d = self.ants.direction(ant.pos, ant.target)
+        else:
+            n = ant.path.pop(0)
+            d = self.ants.direction(ant.pos, n)
+
+        if not d:
+            self.reset_targets_for_ant(ant)
+            ant.set_idle()
+            return
+
+        if not self.do_move_direction(ant, d):
+            self.do_move_direction(ant, ['n', 'e', 'w', 's'])
+            self.reset_targets_for_ant(ant)
+            ant.set_idle()
+            return
+
+        if ant.pos == ant.target:
+            self.reset_targets_for_ant(ant)
+            ant.set_idle()
+
+    def check_for_dead_ants(self):
+        for ant in self.antsmgr.values():
+            if ant.pos in self.ants.my_ants():
+                continue
+            if ant.target in self.food_ant.keys():
+                del self.food_ant[ant.target]
+            del self.pos_ant[ant.pos]
+            del self.antsmgr[ant.ant_id]
+
+    def do_turn(self, ants):
+        self.orders = {}
+        self.ants = ants
+
+        self.process_new_ants()
+        self.check_for_dead_ants()
+        self.process_new_food()
+
+        for ant in self.antsmgr.values():
+            self.give_ant_something_to_do(ant)
+
+            if ant.target:
+                self.move_ant_towards_target(ant)
+
+        log(self.ants.time_remaining())
+
+if __name__ == '__main__':
+    # psyco will speed up python a little, but is not needed
+    try:
+        import psyco
+        psyco.full()
+    except ImportError:
+        pass
+
+    try:
+        # if run is passed a class with a do_turn method, it will do the work
+        # this is not needed, in which case you will need to write your own
+        # parsing function and your own game state class
+        Ants.run(MyBot())
+    except KeyboardInterrupt:
+        print('ctrl-c, leaving ...')

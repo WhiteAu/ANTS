@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Ants" basedir="." default="buildJar">
+	<property name="src" location="src"/>
+	<property name="bin" location="bin"/>
+	<property name="dist"  location="dist"/>
+    
+	<target name="compile" description="compile the source" depends="clean" >
+    	<javac srcdir="${src}" destdir="${bin}" includeAntRuntime="false"/>
+	</target>
+	
+	<target name="createJar" description="creates jar file" depends="compile">
+	    <jar jarfile="${dist}/MyBot.jar" basedir="${bin}">
+	    	<manifest>
+            	<attribute name="Main-Class" value="MyBot"/>
+        	</manifest>
+        </jar>
+	</target>
+    
+	<target name="clean" description="clean up" >
+    	<delete dir="${bin}/*" />
+   	 	<delete file="${bin}/*" />
+    	<delete file="${dist}/MyBot.jar" />
+ 	</target>
+	
+</project>

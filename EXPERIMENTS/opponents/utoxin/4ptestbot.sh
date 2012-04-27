@@ -1,0 +1,1 @@
+python tools/playgame.py "python MyBot.py3" "python tools/sample_bots/python/HunterBot.py" "python tools/sample_bots/python/HunterBot.py" "python tools/sample_bots/python/HunterBot.py" --map_file tools/maps/random_walk/random_walk_04p_02.map --log_dir game_logs --turns 1500 --html ~/aichallenge/game_logs/last_game.html --nolaunch --verbose -e

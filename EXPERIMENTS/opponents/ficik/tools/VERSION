@@ -1,0 +1,9 @@
+This tools package was published on Fri Dec  9 20:20:47 UTC 2011.
+
+Last change in the ants/ folder was:
+commit 07d72922c2b3dda83cfa4f554996c77dcb28e8f3
+Date:   Fri Dec 9 12:20:06 2011 -0800
+
+    scenario replays store original map
+
+Check https://github.com/aichallenge/aichallenge/ants/ for new versions.

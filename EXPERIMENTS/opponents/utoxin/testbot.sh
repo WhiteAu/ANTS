@@ -1,0 +1,1 @@
+python ~/aichallenge/ants/playgame.py "python MyBot.py3" "python /home/mwalker/aichallenge/ants/dist/sample_bots/python/HunterBot.py" --map_file ~/aichallenge/ants/maps/random_walk/random_walk_02p_01.map --log_dir game_logs --turns 600 --html ~/AIChallenge-Ants/game_logs/last_game.html --nolaunch --verbose -e

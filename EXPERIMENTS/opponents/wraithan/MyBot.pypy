@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+from ants import *
+import time
+import logging
+
+
+# logging.basicConfig(filename='bot.html', level=logging.WARNING)
+directions = ['n','e','s','w']
+class MyBot:
+    taken_locations = []
+    turn_calcs = 0
+    turn = 0
+    ants_to_reprocess = {}
+    def __init__(self):
+        pass
+    
+    def do_setup(self, ants):
+        pass
+
+    def do_turn(self, ants):
+        try:
+            self.turn +=1
+            # logging.warning('<div>Turn: %d</div>' % self.turn)
+            self.turn_calcs = 0
+            self.ants = ants
+            self.available_ants = ants.my_ants()
+            self.disperse()
+            # logging.warning(self.ants.render_text_weighted_map())
+            # logging.warning('<div>Food: %d</div>' % len(self.ants.food_list))
+            # logging.warning('<div>My Ants: %d</div>' % len(self.ants.my_ants()))
+            # logging.warning('<div>Enemy Hills: %d</div>' % len(self.ants.enemy_hills()))
+            # logging.warning('<div>Time Left: %d</div>' % self.ants.time_remaining())
+            for ant_loc in self.available_ants: 
+                if self.climb_hill(*ant_loc, ant_loc=ant_loc):
+                    pass
+                else:
+                    self.dont_get_stepped_on(ant_loc)
+                if ants.time_remaining() < 10:
+                    break
+            for ant_loc in self.ants_to_reprocess:
+                climb_hill
+            # logging.warning('<div>End time: %d</div>' % self.ants.time_remaining())
+            self.taken_locations = []
+        except Exception as e:
+            logging.error('<div>%s</div>' % e)
+            raise
+
+    def disperse(self):
+        use_base_map = True
+        hills_to_remove = []
+        for hill in self.ants.known_enemy_hill_list:
+            tile = self.ants.map[hill[0]][hill[1]]
+            if self.ants.visible(hill) and hill not in self.ants.hill_list:
+                hills_to_remove.append(hill)
+                use_base_map = False
+        if use_base_map and self.ants.base_map:
+            pass
+        else:
+            for hill in hills_to_remove:
+                self.ants.known_enemy_hill_list.remove(hill)
+            self.ants.base_map = [[None for col in range(self.ants.cols)]
+                                  for row in range(self.ants.rows)]
+
+        for row in range(self.ants.rows):
+            for col in range(self.ants.cols):
+                loc = (row, col)
+                if not self.ants.passable(loc):
+                    self.ants.weighted_map[row][col] = -1                    
+                elif not self.ants.visible(loc):
+                    self.ants.weighted_map[row][col] = 1
+        for row,col in self.ants.known_enemy_hill_list:
+            if self.ants.time_remaining() < 100:
+                return
+            self.disperse_at(row, col, HILL_WEIGHT, self.ants.weighted_map, True)
+            
+        for row,col in self.ants.food_list:
+            if self.ants.time_remaining() < 80:
+                return
+            self.disperse_at(row, col, FOOD_WEIGHT, self.ants.weighted_map)
+  
+        for ant,owner in self.ants.enemy_ants():
+            row,col = ant
+            if self.ants.time_remaining() < 60:
+                return
+            self.disperse_at(row, col, 8, self.ants.weighted_map)
+                
+    def disperse_at(self, row, col, value=None, the_map=None, optional_vision=False):
+        if self.ants.time_remaining() < len(self.ants.my_ants())+40:
+            return False
+        
+        new_value = value - 1
+        for direction in directions:
+            self.turn_calcs += 1
+            new_loc = self.ants.destination((row, col), direction)
+            new_row,new_col = new_loc
+            spot = the_map[new_row][new_col]
+            if spot != -1 and spot < value and self.ants.passable(new_loc) and (optional_vision or self.ants.visible(new_loc)):
+                the_map[new_row][new_col] = new_value
+                if new_value > 1:
+                    if not self.disperse_at(new_row, new_col, new_value, the_map):
+                        return False
+        return True
+
+
+    def climb_hill(self, row, col, ant_loc, direction=None, depth=1):
+        if self.ants.time_remaining() < 20:
+            return
+        current_value = self.ants.weighted_map[row][col]
+        possible_directions = []
+        for possibility in directions:
+            new_row,new_col = self.ants.destination((row, col), possibility)
+            spot = self.ants.weighted_map[new_row][new_col]
+            if spot != -1:
+                possible_directions.append(possibility)
+                if spot > current_value:
+                    direction = direction or possibility
+                    if self.do_move_direction(ant_loc, direction):
+                        # logging.warning('<div>climb_hill Ant - Row: %s Col: %s Dir: %s CValue: %s NValue: %s</div>' % (row, col, direction, current_value, spot))
+                        if depth > 1:
+                            self.ants_to_reprocess.remove(ant_loc)
+                        return True
+                    
+        # self.ants_to_reprocess.append(ant_loc)
+        return self.random_movement(ant_loc, possible_directions)
+
+    def random_movement(self, loc, possible_directions=directions[:]):
+        random.shuffle(possible_directions)
+        for direction in possible_directions:
+            if self.do_move_direction(loc, direction):
+                # logging.warning('<div>random_movement Ant - Row: %s Col: %s Dir: %s</div>' % (loc[0], loc[1], direction))
+                return True
+
+    def dont_get_stepped_on(self, loc):
+        if loc in self.taken_locations:
+            for direction in directions:
+                if self.do_move_direction(loc, direction):
+                    return True
+
+    def do_move_direction(self, loc, direction):
+        new_loc = self.ants.destination(loc, direction)
+        if (self.ants.passable(new_loc) and new_loc not in self.taken_locations):
+            self.ants.issue_order((loc, direction))
+            self.taken_locations.append(new_loc)
+            return True
+
+            
+if __name__ == '__main__':
+    # psyco will speed up python a little, but is not needed
+    try:
+        import psyco
+        psyco.full()
+    except ImportError:
+        pass
+    
+    try:
+        # if run is passed a class with a do_turn method, it will do the work
+        # this is not needed, in which case you will need to write your own
+        # parsing function and your own game state class
+        Ants.run(MyBot())
+    except KeyboardInterrupt:
+        print('ctrl-c, leaving ...')

@@ -1,0 +1,19 @@
+Build with ant
+
+
+Content:
+
+tools and src/core:
+	unmodified official starter package.
+
+src/mybot:
+	java sources of my bot
+
+dist:
+	jar build of my bot
+
+game_logs:
+	logs of game server
+
+log:
+	logs of my bot

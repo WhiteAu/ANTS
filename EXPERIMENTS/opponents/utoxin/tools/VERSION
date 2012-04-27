@@ -1,0 +1,9 @@
+This tools package was published on Thu Nov 17 22:26:30 UTC 2011.
+
+Last change in the ants/ folder was:
+commit d4df5840e156234fb5201578945fc5c5705c385b
+Date:   Wed Nov 16 10:17:20 2011 -0800
+
+    fix lone survivor ending to remove points for hills razed
+
+Check https://github.com/aichallenge/aichallenge/ants/ for new versions.

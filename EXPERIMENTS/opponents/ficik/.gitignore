@@ -1,0 +1,11 @@
+.*
+!.gitignore
+*~
+dist/*
+!dist/MyBot.jar
+log/*
+!log/empty
+game_logs/*
+!game_logs/empty
+bin/*
+!bin/empty
