@@ -3,6 +3,7 @@ from ants import *
 from fractions import Fraction
 from random import shuffle, sample
 import logging
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 LOW_TIME = 30
@@ -11,7 +12,7 @@ MAX_NOTICE_DIST = 30 # assign ants to food/missions no more than N manhattan squ
 MINIMAX_DEPTH = 2 #how deep to perform minimax.  Want to keep this fairly low
 ATTACK_DIST = 2 # how far away to try and sic enemy ants from
 BUDDY_DIST = 6 # how far away to posse up to fight enemy ants
-BEST_VAL = -10000
+BEST_VAL = float('-inf')
 BEST_MOVES = []
 WALLS = set()
 
@@ -28,8 +29,7 @@ class Ant:
         self.owner = owner
         
         self.best_loc = None
-
-
+    
     # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
     #UPDATED: ant object calls this and updates accordingly
@@ -93,7 +93,7 @@ class Ant:
                 return False
                 
             f = f_score.items()
-            #shuffle(f)
+            shuffle(f)
             cval = min(f, key = lambda x: x[1])
             current = cval[0]
             
@@ -187,102 +187,51 @@ class MyBot:
         for row in range(ants.rows):
             for col in range(ants.cols):
                 self.unseen.append((row,col))
+         
+    def max(self, world, index, buddies, enemies, branchsofar):
+        global BEST_VAL, BEST_MOVES
     
-
-    '''
-       def do_attack_damage(self):
-        """ Kill ants which take more than 1 damage in a turn
-
-            Each ant deals 1/#nearby_enemy damage to each nearby enemy.
-              (nearby enemies are those within the attackradius)
-            Any ant with at least 1 damage dies.
-            Damage does not accumulate over turns
-              (ie, ants heal at the end of the battle).
-        """
-        damage = defaultdict(Fraction)
-        nearby_enemies = {}
-
-        # each ant damages nearby enemies
-        for ant in self.current_ants.values():
-            enemies = self.nearby_ants(ant.loc, self.attackradius, ant.owner)
-            if enemies:
-                nearby_enemies[ant] = enemies
-                strenth = 10 # dot dot dot
-                if ant.orders[-1] == '-':
-                    strenth = 10
-                else:
-                    strenth = 10
-                damage_per_enemy = Fraction(strenth, len(enemies)*10)
-                for enemy in enemies:
-                    damage[enemy] += damage_per_enemy
-
-        # kill ants with at least 1 damage
-        for ant in damage:
-            if damage[ant] >= 1:
-                self.kill_ant(ant)
-    '''
-
-    #Sana is a busta and steals rhymesnshit
-    def evaluate_moves (self, world, attack_rad2, near_buddies, near_enemies):
-        total = 0
-        for ant in near_buddies:
-            if near_enemies:
-                for enemy in near_enemies: 
-                    if (world.distance(ant.try_loc, enemy.try_loc) < attack_rad2):
-                        offset = world.nearby_enemies(ant.try_loc, world.attackradius2) -  world.nearby_ants(enemy.try_loc, world.attackradius2)
-                        if offset > 0:
-                            total -= 1
-                        elif offset < 0:
-                            total += 1 
-        return total
-                            
-                    
-    def gen_attck_moves(self, world, ant_list):
-        total_locs = set()
-        for ant in ant_list:
-            aroundMe = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
-            #only care about unique moves
-            neighbors = [nloc for nloc in aroundMe if nloc not in WALLS and nloc not in total_locs]
-            total_locs.union(neighbors)
-            ant.poss_moves = neighbors
-        
-
-    def max_step(self, idx, world, attack_rad2, near_buddies, near_enemies):
-        global BEST_VAL
         if world.time_remaining() < LOW_TIME:
-            return False
+            return 'POOPED'
     
-        if idx < len(near_buddies):
-            ant = near_buddies[idx]
-            for move in ant.poss_moves:
-                ant.try_loc = move
-                self.max_step(idx+1, world, attack_rad2, near_buddies, near_enemies)
+        if index == 0:
+            BEST_MOVES = branchsofar
+            BEST_VAL = float('-inf')
+            branchsofar = range(len(buddies) + len(enemies))
+    
+        if index < len(buddies):
+            ant = buddies[index]
+    
+            # needs pruning duhh.. maybe not now though
+            neighbs = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
+            neighbs.append(ant.loc)
+            moves = [loc for loc in neighbs if loc not in WALLS and loc not in branchsofar]
+    
+            # This may or may not make any sense...
+            # If outnumbered, assume that moving towards the enemy is going to be a bad idea... maximize distance
+            # and prune out the forward motion.
+            # Reverse for when you 
+            """
+            if len(buddies) > len(enemies):
+                moves = sorted(moves, key=lambda(x): world.distance(x, enemies[0].loc), reverse=False)
+            else:
+                moves = sorted(moves, key=lambda(x): world.distance(x, enemies[0].loc), reverse=True)
+            """
+    
+            # simulate & continue
+            for move in moves[:3]:
+                #sim = list(branchsofar)
+                #sim.append(move)
+                #self.max(world, index+1, buddies, enemies, sim)
+                branchsofar[index] = move
+                self.max(world, index+1, buddies, enemies, branchsofar)
         else:
-            value = self.min_step(0, world, attack_rad2, near_buddies, near_enemies)
+            value = self.min(world, index, buddies, enemies, branchsofar)
             if value > BEST_VAL:
                 BEST_VAL = value
-                #save current best move!
-                for ant in near_buddies:
-                    ant.best_loc = ant.try_loc
-        
+                BEST_MOVES = list(branchsofar)
     
-    def min_step(self, idx, world, attack_rad2, near_buddies, near_enemies):
-        if world.time_remaining() < LOW_TIME:
-            return False
-        if idx < len(near_enemies):
-            min_val = 10000
-            ant = near_enemies[idx]
-            for move in ant.poss_moves:
-                ant.try_loc = move
-                value = self.min_step(idx+1, world, attack_rad2, near_buddies, near_enemies)
-                if value < BEST_VAL:
-                    return -10000
-                if value < min_val:
-                    min_val = value
-            return min_val
-        else:
-            return self.evaluate_moves(world, attack_rad2, near_buddies, near_enemies)
-            
+    
     def min(self, world, index, buddies, enemies, branchsofar):
         global BEST_VAL
         if world.time_remaining() < LOW_TIME:
@@ -308,6 +257,7 @@ class MyBot:
                 #value = self.min(world, index+1, buddies, enemies, sim)
                 branchsofar[index] = move
                 value = self.min(world, index+1, buddies, enemies, branchsofar)
+                
                 
                 if value < BEST_VAL: # Min will never choose anything greater than value, so if we already have a branch
                                      # with a better value, don't bother to evaluate other moves on this branch
@@ -344,13 +294,20 @@ class MyBot:
             force = Fraction(10, len(targs)*10)
             for t in targs:
                 damage[t] += force
-
+                
+        # calculate distance metric
+        distance = 0
+        for u in us:
+            # get the closest warriors
+            dists = [world.eucDistance(u,t) for t in them]
+            distance += min(dists)
+            
         # tabulate score
         score = 0.0
         for (a, d) in damage.items():
             if d >= 1: # a fatal blow was dealt
                 if a in us:
-                    score -= 1.1
+                    score -= 1.5
                 if a in them:
                     score += 1
         
@@ -366,53 +323,7 @@ class MyBot:
             if damage[t] < 1 and t in world.my_hills():
                 score -= 10000
         """
-        return score
-    
-    
-    
-    def max(self, world, index, buddies, enemies, branchsofar):
-        global BEST_VAL, BEST_MOVES
-        
-        if world.time_remaining() < LOW_TIME:
-            return 'POOPED'
-        
-        if index == 0:
-            BEST_MOVES = branchsofar
-            BEST_VAL = float('-inf')
-            branchsofar = range(len(buddies) + len(enemies))
-        
-        if index < len(buddies):
-            ant = buddies[index]
-            
-            # needs pruning duhh.. maybe not now though
-            neighbs = [world.destination(ant.loc, d) for d in ['n','s','e','w']]
-            neighbs.append(ant.loc)
-            moves = [loc for loc in neighbs if loc not in WALLS and loc not in branchsofar]
-            
-            # This may or may not make any sense...
-            # If outnumbered, assume that moving towards the enemy is going to be a bad idea... maximize distance
-            # and prune out the forward motion.
-            # Reverse for when you 
-            """
-            if len(buddies) > len(enemies):
-                moves = sorted(moves, key=lambda(x): world.distance(x, enemies[0].loc), reverse=False)
-            else:
-                moves = sorted(moves, key=lambda(x): world.distance(x, enemies[0].loc), reverse=True)
-            """
-            
-            # simulate & continue
-            for move in moves[:3]:
-                #sim = list(branchsofar)
-                #sim.append(move)
-                #self.max(world, index+1, buddies, enemies, sim)
-                branchsofar[index] = move
-                self.max(world, index+1, buddies, enemies, branchsofar)
-        else:
-            value = self.min(world, index, buddies, enemies, branchsofar)
-            if value > BEST_VAL:
-                BEST_VAL = value
-                BEST_MOVES = list(branchsofar)
-    
+        return score - distance
     
     
     def group_ants(self, world, ants, enemy_locs, rad):
@@ -431,41 +342,19 @@ class MyBot:
             if not enemies:
                 ants.remove(ant) # if no enemies, just continue
             else:
-                ants.remove(ant)
-                fr = set([ant])
-                ant_locs = [ant.loc for ant in ants]
-                sq = world.getSquaresInRadius(ant.loc, world.viewradius2)
-                
-                # get friends
-                fr_locs = list(sq.intersection(ant_locs))
-                for f in fr_locs[:5]:
-                    friend = [aloc for aloc in ants if aloc.loc == f][0]
-                    fr.add(friend)
-                    ants.remove(friend)
-                    
-                    # get threats that new friend brings
-                    sq = world.getSquaresInRadius(f, rad)
-                    enemies.extend(sq.intersection(enemy_locs))
-                
-                # get all possib threats for the group
-                en = set()
-                for e in set(enemies):
-                    enemy = Ant(e, 'enemy')
-                    en.add(enemy)
-                '''
                 fr = set() # these are Ant objects
                 en = set() # these are objects
                 openset = list([ant]) # these are objects
                 enemies = set() # these are locations 
                 
-                while (openset and len(fr) < 5):
+                while (openset):
                     current = openset.pop(0)
-                    
+                
                     # if we are evaluating our own ant:
                     if (current.owner == MY_ANT):
                         fr.add(current)
                         ants.remove(current)
-                        
+                
                         # get threats and all of them to group
                         threats = world.getSquaresInRadius(current.loc, rad).intersection(enemy_locs)
                         for t in threats:
@@ -482,18 +371,30 @@ class MyBot:
                             vic = [ant for ant in ants if ant.loc == v][0]
                             if vic not in openset:
                                 openset.append(vic)
-                    '''
+                if (len(fr) > len(en) + 1):
+                    logging.debug('Paring a group of size ' + str(len(fr)) + ' vs ' + str(len(en)) + ' down!')
+                    new_fr = set()
+                    # get rid of extraneous ants by getting the closest two ants for each enemy
+                    fr_locs = [ant.loc for ant in fr]
+                    for e in en:
+                        # get the closest warriors
+                        victims = world.getSquaresInRadius(e.loc, rad).intersection(fr_locs)
+                        dists = [(world.eucDistance(v,e.loc), v) for v in victims]
+                        dists.sort()
+                        numneed = len(en) + 1
+                        closest = dists[:numneed]
+                        for c in closest:
+                            ant_loc = c[1]
+                            antobj = [ant for ant in fr if ant.loc == ant_loc][0]
+                            new_fr.add(antobj)
+                    fr = new_fr
                 groups.append((fr, en))
         
         logging.debug('Returning the groups...')
         return groups
         
-    def fight_ants(self, world, avail_ants): 
-        #'''  
-        # EXPERIMENTAL
+    def fight_ants(self, world, avail_ants):
         rad = world.attackradius2 + 4*sqrt(world.attackradius2) + 4 # (radius+2)^2
-        #rad = world.attackradius2 + 6*sqrt(world.attackradius2) + 9 # (radius+3)^2
-        #rad = world.viewradius2
         enemy_locs = [enemy[0] for enemy in world.enemy_ants()] # enemy locations to do intersections with
         
         # Now sort em into groups!
@@ -510,84 +411,41 @@ class MyBot:
             
             ## Attack stuff goes hereee :) we can also use possib moves for good stuffs
             # shouldn't gen attck moves before simulating right? it will change per ant per turn? ehh?
-            ret = self.max(world, 0, buddies, enemies, [])
-            logging.debug('max returned this: ' + str(ret))
             
-            moves = BEST_MOVES
+            if (len(buddies) > len(enemies)):
+                ret = self.max(world, 0, buddies, enemies, [])
+                logging.debug('max returned this: ' + str(ret))
             
-            if moves:
-                for i in range(0, len(buddies)):
-                    ant = buddies[i]
-                    
-                    oldmission = ant.mission_loc
-                    oldtype = ant.mission_type
-                    oldpath = ant.path
-                    
-                    ant.mission_loc = moves[i]
-                    ant.mission_type = 'FIGHT'
-                    ant.path = []
-                    if ant.mission_loc == ant.loc: # staying still was the best move
-                        ant.mission_loc = None
-                        ant.mission_type = None
+                moves = BEST_MOVES
+                
+                if moves:
+                    for i in range(0, len(buddies)):
+                        ant = buddies[i]
+                        
+                        oldmission = ant.mission_loc
+                        oldtype = ant.mission_type
+                        oldpath = ant.path
+                        
+                        ant.mission_loc = moves[i]
+                        ant.mission_type = 'FIGHT'
                         ant.path = []
-                        avail_ants.remove(ant)
-                    elif ant.do_move_location(world, self.our_ants):
-                        avail_ants.remove(ant)
-                    else:
-                        ant.mission_loc = oldmission
-                        ant.mission_type = oldtype
-                        ant.path = oldpath
-                    
-            else:
-                logging.debug("minimax timed out or failed in someway... ")
-            
-            
-        # END EXPERIMENTAL
-        '''   
-        global BEST_VAL
-        BEST_VAL = float('-inf') #Because screw infinity
-        enemies = set([Ant(enemy[0], enemy[1]) for enemy in world.enemy_ants()])
-        attack_rad2 = world.attackradius2+2*world.attackradius2+1
-        #for each of our ants, perform depth-n minimax against enemies up to 5 squares away
-        
-        for ant in set(avail_ants):
-            #need a better way to find enemy ants in proximity to a given ant...
-
-            #How to also remove from avail ants and enemies in one swoop? Want a list and 
-            #not a set to be able to iterate over them in a tricky way
-            near_enemies = [enemy for enemy in enemies if world.distance(ant.loc, enemy.loc) < attack_rad2]
-            if len(near_enemies) == 0:
-                continue
-            
-            for bad_friend in near_enemies:
-                enemies.remove(bad_friend)
-
-            near_buddies = [buddy for buddy in avail_ants if world.distance(ant.loc, buddy.loc) < BUDDY_DIST]
-
-            #generate all the possible next moves for our/enemy ants
-            self.gen_attck_moves(world, near_buddies)
-            self.gen_attck_moves(world, near_enemies)
-            self.max_step(0, world, attack_rad2, near_buddies, near_enemies)
-            
-            for ant in near_buddies:
-                oldmission = ant.mission_loc
-                oldtype = ant.mission_type
-                oldpath = ant.path
-                
-                ant.mission_loc = ant.best_loc
-                ant.mission_type = 'FIGHT'
-                ant.path = []
-                if ant.do_move_location(world, self.our_ants):
-                    avail_ants.remove(ant)
-                    ant.best_loc = None
+                        if ant.mission_loc == ant.loc: # staying still was the best move
+                            ant.mission_loc = None
+                            ant.mission_type = None
+                            ant.path = []
+                            avail_ants.remove(ant)
+                        elif ant.do_move_location(world, self.our_ants):
+                            avail_ants.remove(ant)
+                        else:
+                            ant.mission_loc = oldmission
+                            ant.mission_type = oldtype
+                            ant.path = oldpath
+                        
                 else:
-                    ant.mission_loc = oldmission
-                    ant.mission_type = oldtype
-                    ant.path = oldpath
-            #find ants nearby our ant
-            #i = 0
-            '''
-                
+                    logging.debug("minimax timed out or failed in someway... ")
+            else:
+                logging.debug("We had no change of winning... so don't try")
+            
             
 
     def hunt_food(self, world, avail_ants):
@@ -675,6 +533,9 @@ class MyBot:
                 dist.append((1 - o, d, ant, loc))
         
         for (o, d, ant, loc) in dist:
+            if world.time_remaining() < LOW_TIME:
+                return
+                
             if ant in avail_ants and loc in edges:
                 ant.mission_type = 'EXPLORE'
                 ant.mission_loc = loc
@@ -785,7 +646,7 @@ class MyBot:
     def do_turn(self, world): 
         # Update our_ants list (remove dead ants, update ant locations, add newly spawned ants)
         self.update_ant_list(world)
-        logging.debug('Done updating the ant list.')
+        logging.debug('%s - Done updating the ant list.', str(world.time_remaining()))
         
         avail_ants = set(self.our_ants) # ants that are available at this turn
         
@@ -794,21 +655,22 @@ class MyBot:
 
         # attack any hills we see
         self.hunt_hills(world, avail_ants)
-        logging.debug('Done hunting for hills.')
+        logging.debug('%s - Done hunting for hills.', str(world.time_remaining()))
         
         # carry on
         self.continue_on_target(world, avail_ants)
         
         # hunt for more food
         self.hunt_food(world, avail_ants)
-        logging.debug('Done hunting for food.')
+        logging.debug('%s - Done hunting for food.', str(world.time_remaining()))
         
         # explore the map!
         self.explore(world, avail_ants)
-        logging.debug('Done exploring.')
+        logging.debug('%s - Done exploring.', str(world.time_remaining()))
         
         # spread your$elves out!
         #self.bread_crumb(world, avail_ants)
+        #logging.debug('%s - Done breadcrumbing.', str(world.time_remaining()))
         
         # default move
         '''
