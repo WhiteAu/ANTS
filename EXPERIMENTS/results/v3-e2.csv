@@ -1,0 +1,34 @@
+round,our_score,their_score,our_status,their_status,our_turns,their_turns,our_ants,their_ants,in_hive?
+on: ../tools/maps/cell_maze/cell_maze_p02_20.map
+0,3,0,survived,survived,214,214,55,17,0
+1,3,0,survived,survived,249,249,76,64,0
+2,3,0,survived,survived,227,227,64,26,0
+3,3,0,survived,survived,215,215,44,39,0
+4,3,0,survived,survived,253,253,65,3,0
+5,0,3,timeout,survived,137,137,54,48,0
+6,3,0,survived,survived,216,216,63,15,0
+7,3,0,survived,survived,235,235,56,17,0
+8,3,0,survived,survived,219,219,66,38,0
+9,3,0,survived,survived,226,226,71,42,0
+on: ../tools/maps/maze/maze_p02_31.map
+0,8,2,survived,survived,262,262,17,6,0
+1,8,2,survived,survived,188,188,25,17,0
+2,8,2,survived,survived,540,540,25,12,0
+3,8,2,survived,survived,246,246,38,10,0
+4,4,4,survived,survived,750,750,9,212,0
+5,8,2,survived,survived,349,349,41,12,0
+6,9,0,survived,survived,331,331,34,21,0
+7,8,2,survived,survived,210,210,34,12,0
+8,8,2,survived,survived,150,150,19,4,0
+9,9,0,survived,survived,188,188,24,6,0
+on: ../tools/maps/random_walk/random_walk_p02_21.map
+0,3,0,survived,survived,169,169,62,51,0
+1,3,0,survived,survived,221,221,57,30,0
+2,3,0,survived,survived,157,157,37,36,0
+3,3,0,survived,survived,189,189,65,37,0
+4,3,0,survived,survived,214,214,61,45,0
+5,3,0,survived,survived,233,233,47,32,0
+6,3,0,survived,survived,183,183,55,40,0
+7,3,0,survived,survived,164,164,52,38,0
+8,3,0,survived,survived,164,164,45,25,0
+9,3,0,survived,survived,179,179,52,67,0

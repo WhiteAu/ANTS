@@ -1,12 +1,56 @@
 round,our_score,their_score,our_status,their_status,our_turns,their_turns,our_ants,their_ants,in_hive?
-vs. HunterBot.py
-0,1,1,survived,survived,10,10,3,3,0
-1,1,1,survived,survived,10,10,2,3,0
-2,1,1,survived,survived,10,10,3,4,0
-3,1,1,survived,survived,10,10,4,4,0
-4,1,1,survived,survived,10,10,3,3,0
-5,1,1,survived,survived,10,10,2,2,0
-6,1,1,survived,survived,10,10,3,3,0
-7,1,1,survived,survived,10,10,3,5,0
-8,1,1,survived,survived,10,10,2,3,0
-9,1,1,survived,survived,10,10,3,3,0
+vs. python ../tools/sample_bots/python/GreedyBot.py
+0,1,1,survived,survived,750,750,253,74,0
+1,1,1,survived,survived,750,750,159,53,0
+2,3,0,survived,timeout,395,395,143,80,0
+3,1,1,survived,survived,750,750,249,64,0
+4,1,1,survived,survived,750,750,247,55,0
+5,3,0,survived,timeout,554,554,206,76,0
+6,3,0,survived,timeout,410,410,159,77,0
+7,3,0,survived,timeout,462,462,165,80,0
+8,1,1,survived,survived,750,750,226,57,0
+9,3,0,survived,timeout,644,644,200,79,0
+vs. python opponents/wraithan/MyBot.pypy
+0,1,1,survived,survived,750,750,154,111,0
+1,1,1,survived,survived,750,750,130,91,0
+2,1,1,survived,survived,750,750,262,133,0
+3,1,1,survived,survived,750,750,155,100,0
+4,1,1,survived,survived,750,750,276,191,0
+5,1,1,survived,survived,750,750,254,138,0
+6,1,1,survived,survived,750,750,145,107,0
+7,1,1,survived,survived,750,750,228,166,0
+8,1,1,survived,survived,750,750,191,107,0
+9,1,1,survived,survived,750,750,171,119,0
+vs. java -jar opponents/ficik/dist/MyBot.jar
+0,3,0,survived,survived,693,693,166,165,0
+1,3,0,survived,survived,406,406,94,68,0
+2,3,0,survived,survived,740,740,220,185,0
+3,3,0,survived,survived,617,617,184,126,0
+4,3,0,survived,survived,553,553,187,187,0
+5,1,1,survived,survived,750,750,146,71,0
+6,3,0,survived,survived,750,750,201,105,0
+7,1,1,survived,survived,750,750,144,119,0
+8,1,1,survived,survived,750,750,130,102,0
+9,3,0,survived,survived,289,289,113,105,0
+vs. python opponents/utoxin/MyBot.py3
+0,0,3,survived,survived,517,517,6,145,0
+1,0,3,survived,survived,514,514,4,183,0
+2,0,3,survived,survived,437,437,7,93,0
+3,0,3,survived,survived,536,536,10,147,0
+4,0,3,survived,survived,587,587,8,237,0
+5,0,3,survived,survived,506,506,6,103,0
+6,0,3,survived,survived,575,575,12,150,0
+7,0,3,survived,survived,501,501,3,134,0
+8,0,3,survived,survived,576,576,9,154,0
+9,0,3,survived,survived,521,521,8,248,0
+vs. java -jar opponents/rossxwest/MyBot.jar
+0,0,3,survived,survived,303,303,4,137,0
+1,0,3,survived,survived,301,301,11,125,0
+2,0,3,survived,survived,309,309,6,125,0
+3,0,3,survived,survived,288,288,6,104,0
+4,0,3,survived,survived,228,228,7,115,0
+5,0,3,survived,survived,305,305,1,166,0
+6,0,3,survived,survived,181,181,11,80,0
+7,0,3,survived,survived,286,286,1,101,0
+8,0,3,survived,survived,419,419,3,194,0
+9,0,3,survived,survived,243,243,4,64,0

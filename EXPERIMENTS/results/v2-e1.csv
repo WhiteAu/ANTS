@@ -1,0 +1,56 @@
+round,our_score,their_score,our_status,their_status,our_turns,their_turns,our_ants,their_ants,in_hive?
+vs. python ../tools/sample_bots/python/GreedyBot.py
+0,3,0,survived,survived,228,228,87,7,0
+1,3,0,survived,eliminated,242,242,85,0,0
+2,3,0,survived,eliminated,237,237,80,0,0
+3,3,0,survived,survived,274,274,80,2,0
+4,3,0,survived,survived,241,241,49,2,0
+5,3,0,survived,survived,263,263,78,3,0
+6,3,0,survived,eliminated,224,224,100,0,0
+7,3,0,survived,eliminated,242,242,80,0,0
+8,3,0,survived,survived,292,292,57,3,0
+9,3,0,survived,survived,280,280,61,1,0
+vs. python opponents/wraithan/MyBot.pypy
+0,3,0,survived,survived,274,274,31,1,0
+1,3,0,survived,survived,267,267,69,1,0
+2,3,0,survived,eliminated,313,313,43,0,0
+3,3,0,survived,survived,266,266,30,1,0
+4,3,0,survived,eliminated,264,264,48,0,0
+5,3,0,survived,eliminated,282,282,67,0,0
+6,3,0,survived,eliminated,258,258,33,0,0
+7,3,0,survived,survived,296,296,44,5,0
+8,3,0,survived,eliminated,278,278,70,0,0
+9,3,0,survived,survived,305,305,42,3,0
+vs. java -jar opponents/ficik/dist/MyBot.jar
+0,3,0,survived,survived,205,205,79,21,0
+1,3,0,survived,survived,216,216,77,31,0
+2,3,0,survived,survived,246,246,58,24,0
+3,3,0,survived,survived,255,255,62,19,0
+4,3,0,survived,survived,246,246,31,28,0
+5,3,0,survived,survived,182,182,53,20,0
+6,3,0,survived,survived,226,226,84,59,0
+7,3,0,survived,survived,265,265,63,10,0
+8,3,0,survived,survived,296,296,73,26,0
+9,3,0,survived,survived,209,209,36,8,0
+vs. python opponents/utoxin/MyBot.py3
+0,0,3,eliminated,survived,333,333,0,49,0
+1,3,0,survived,survived,316,316,5,46,0
+2,0,3,survived,survived,536,536,1,126,0
+3,0,3,survived,survived,474,474,4,210,0
+4,0,3,eliminated,survived,284,284,0,46,0
+5,0,3,eliminated,survived,424,424,0,78,0
+6,0,3,survived,survived,284,284,2,33,0
+7,3,0,survived,survived,281,281,10,22,0
+8,0,3,survived,survived,388,388,3,111,0
+9,3,0,survived,survived,264,264,21,30,0
+vs. java -jar opponents/rossxwest/MyBot.jar
+0,0,3,survived,survived,180,180,14,55,0
+1,0,3,survived,survived,175,175,26,70,0
+2,0,3,survived,survived,223,223,6,68,0
+3,0,3,survived,survived,233,233,8,46,0
+4,0,3,survived,survived,211,211,17,70,0
+5,0,3,survived,survived,199,199,13,66,0
+6,0,3,survived,survived,184,184,21,77,0
+7,0,3,survived,survived,188,188,18,46,0
+8,0,3,survived,survived,174,174,30,73,0
+9,0,3,survived,survived,185,185,18,54,0

@@ -1,12 +1,34 @@
 round,our_score,their_score,our_status,their_status,our_turns,their_turns,our_ants,their_ants,in_hive?
-vs. HunterBot.py
-0,1,1,survived,survived,10,10,1,3,0
-1,1,1,survived,survived,10,10,4,3,0
-2,1,1,survived,survived,10,10,3,6,0
-3,1,1,survived,survived,10,10,5,4,0
-4,1,1,survived,survived,10,10,6,5,0
-5,1,1,survived,survived,10,10,2,6,0
-6,1,1,survived,survived,10,10,2,3,0
-7,1,1,survived,survived,10,10,4,3,0
-8,1,1,survived,survived,10,10,6,6,0
-9,1,1,survived,survived,10,10,5,6,0
+on: ../tools/maps/cell_maze/cell_maze_p02_20.map
+0,3,0,survived,survived,258,258,101,78,0
+1,3,0,survived,survived,240,240,90,56,0
+2,1,1,survived,survived,750,750,185,92,0
+3,3,0,survived,survived,581,581,133,98,0
+4,3,0,survived,survived,522,522,116,124,0
+5,3,0,survived,survived,586,586,132,82,0
+6,1,1,survived,survived,750,750,135,98,0
+7,1,1,survived,survived,750,750,198,205,0
+8,3,0,survived,survived,672,672,157,70,0
+9,3,0,survived,survived,480,480,151,94,0
+on: ../tools/maps/maze/maze_p02_31.map
+0,6,3,survived,survived,750,750,28,22,0
+1,9,0,survived,survived,250,250,16,11,0
+2,6,3,survived,survived,716,716,26,20,0
+3,6,3,survived,survived,750,750,156,14,0
+4,6,3,survived,survived,750,750,67,25,0
+5,6,3,survived,survived,750,750,34,26,0
+6,6,3,survived,survived,750,750,75,11,0
+7,4,7,timeout,survived,250,250,41,13,0
+8,6,3,survived,survived,750,750,111,21,0
+9,6,3,survived,survived,750,750,50,38,0
+on: ../tools/maps/random_walk/random_walk_p02_21.map
+0,1,1,survived,survived,750,750,86,54,0
+1,1,1,survived,survived,750,750,118,110,0
+2,1,1,survived,survived,750,750,52,122,0
+3,1,1,survived,survived,750,750,86,106,0
+4,1,1,survived,survived,750,750,96,65,0
+5,3,0,survived,survived,639,639,64,66,0
+6,3,0,survived,survived,335,335,92,54,0
+7,1,1,survived,survived,750,750,14,168,0
+8,3,0,survived,survived,310,310,68,47,0
+9,1,1,survived,survived,750,750,59,89,0

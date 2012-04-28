@@ -6,29 +6,24 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-LOW_TIME = 30
-HILL_ATTACK_MAX = 10 # no more than N ants go after any given enemy hill
-MAX_NOTICE_DIST = 30 # assign ants to food/missions no more than N manhattan squares away -- that
-MINIMAX_DEPTH = 2 #how deep to perform minimax.  Want to keep this fairly low
-ATTACK_DIST = 2 # how far away to try and sic enemy ants from
-BUDDY_DIST = 6 # how far away to posse up to fight enemy ants
-BEST_VAL = float('-inf')
-BEST_MOVES = []
-WALLS = set()
+LOW_TIME = 50               # timeout limit
+HILL_ATTACK_MAX = 10        # no more than N ants go after any given enemy hill
+MAX_NOTICE_DIST = 30        # assign ants to food/missions no more than N manhattan squares away -- that
+
+BEST_VAL = float('-inf')    # best val for minimax
+BEST_MOVES = []             # corresponding best moves
+
+WALLS = set()               # walls seen so far
 
 class Ant:
     def __init__(self, loc, owner):
         self.loc = loc
-        self.try_loc = None
         self.path = [] #to store an A* path to a far away goal
         self.next_loc = None # assigned in next immediate turn
-        self.mission_type = None # string hill, food, or land
+        self.mission_type = None # str.ing hill, food, or land
         self.mission_loc = None
         self.wait = 0
-        self.poss_moves = []
         self.owner = owner
-        
-        self.best_loc = None
     
     # Moves an ant in loc in the direction dir. Checks for possible collisions and
     # map blocks before doing so.
@@ -104,7 +99,7 @@ class Ant:
                 elif self.mission_type == 'EXPLORE':
                     self.path = path[:1]
                 else:
-                    self.path = path[:5]
+                    self.path = path[:10]
                 return True
                 
             
@@ -323,7 +318,7 @@ class MyBot:
             if damage[t] < 1 and t in world.my_hills():
                 score -= 10000
         """
-        return score - distance
+        return score - (distance*.01)
     
     
     def group_ants(self, world, ants, enemy_locs, rad):
@@ -473,7 +468,10 @@ class MyBot:
                     ant.mission_loc = None
 
         
-    def hunt_hills(self, world, avail_ants):      
+    def hunt_hills(self, world, avail_ants): 
+        if world.time_remaining() < LOW_TIME:
+            return False     
+    
         #add newly discovered enemy hills to our master list!
         for hill_loc, hill_owner in world.enemy_hills():
             if hill_loc not in self.hills:
@@ -492,6 +490,8 @@ class MyBot:
         
         dist.sort()
         for (d, ant, loc) in dist:
+            if world.time_remaining() < LOW_TIME:
+                return False
             if ant in avail_ants and counts[loc] < HILL_ATTACK_MAX:
                 oldmission = ant.mission_type
                 oldloc = ant.mission_loc
@@ -515,6 +515,9 @@ class MyBot:
         return float(len(land))/len(visible)
     
     def explore(self, world, avail_ants): # make sure we aren't targetting walls?
+        if world.time_remaining() < LOW_TIME:
+            return
+            
         edges = set()
         for loc in set(self.unseen):
             if world.visible(loc):
@@ -527,6 +530,8 @@ class MyBot:
         # Can probs be more efficient about this -- will look into it
         dist = []
         for loc in edges:
+            if world.time_remaining() < LOW_TIME:
+                return
             o = self.openness(world,loc)
             for ant in set(avail_ants):
                 d = ant.betterDist(world,ant.loc,loc)
@@ -589,7 +594,9 @@ class MyBot:
     
     def update_ant_list(self, world):
         sort_ants = sorted(self.our_ants, key=lambda x : x.wait, reverse=True)
-        for antums in set(self.our_ants):
+        for antums in set(self.our_ants):    
+            if world.time_remaining() < LOW_TIME:
+                return False
             # Update locations of ants that have moved
             if antums.next_loc != None:
                 antums.loc = antums.next_loc
@@ -621,7 +628,8 @@ class MyBot:
             self.our_ants.add(new_ant)
     
     def continue_on_target(self, world, avail_ants):
-        for antums in set(avail_ants):
+        ants = [ant for ant in avail_ants if ant.mission_type != None]
+        for antums in ants:
             # Continue on target
             if antums.mission_type == "FOOD":
                 if antums.mission_loc in world.food(): # check if food is still there
@@ -659,6 +667,7 @@ class MyBot:
         
         # carry on
         self.continue_on_target(world, avail_ants)
+        logging.debug('%s - Done continuing on target.', str(world.time_remaining()))
         
         # hunt for more food
         self.hunt_food(world, avail_ants)
